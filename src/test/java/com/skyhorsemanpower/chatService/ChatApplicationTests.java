@@ -1,4 +1,4 @@
-package com.skyhorsemanpower.chat;
+package com.skyhorsemanpower.chatService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
