@@ -8,11 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class ChatMemberDto {
-    private String firstMemberUuid;
-    private String secondMemberUuid;
+    private String memberUuid;
 
-    public ChatMemberDto(String firstMemberUuid, String secondMemberUuid) {
-        this.firstMemberUuid = firstMemberUuid;
-        this.secondMemberUuid = secondMemberUuid;
+    public ChatMemberDto(String memberUuid) {
+        this.memberUuid = memberUuid;
     }
 }

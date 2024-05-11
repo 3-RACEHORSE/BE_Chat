@@ -20,6 +20,7 @@ public enum ResponseStatus {
 //    /**
 //     * 900: 기타 에러
 //     */
+    BAD_REQUEST(405, "최소 두명 이상이 있어야합니다."),
     INTERNAL_SERVER_ERROR(500, "Internal server error");
     private final int code;
     private final String message;
