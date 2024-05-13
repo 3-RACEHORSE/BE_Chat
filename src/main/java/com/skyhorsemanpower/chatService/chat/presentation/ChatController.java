@@ -3,20 +3,29 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.common.ExceptionResponse;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/chat")
+@Slf4j
 public class ChatController {
     private final ChatService chatService;
 
@@ -29,5 +38,18 @@ public class ChatController {
         } else {
             return new ExceptionResponse(ResponseStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @PostMapping
+    public void sendChat(@RequestBody ChatVo chatvo) {
+        log.info("chatVo: {}", chatvo);
+        chatService.sendChat(chatvo);
+    }
+
+    @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ChatVo> getChat(
+        @PathVariable(value = "roomNumber") String roomNumber) {
+        log.info("roomNumber: {}", roomNumber);
+        return chatService.getChat(roomNumber);
     }
 }
