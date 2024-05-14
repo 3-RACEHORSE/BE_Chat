@@ -6,6 +6,8 @@ import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
+import com.skyhorsemanpower.chatService.common.CustomException;
+import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -48,16 +50,26 @@ public class ChatServiceImp implements ChatService{
     @Override
     public void sendChat(ChatVo chatVo) {
         log.info("chatVo: {}", chatVo);
-        Chat chat = Chat.builder()
-            .senderUuid(chatVo.getSenderUuid())
-            .content(chatVo.getContent())
-            .roomNumber(chatVo.getRoomNumber())
-            .build();
-        chatRepository.save(chat).subscribe();
+        try {
+            Chat chat = Chat.builder()
+                .senderUuid(chatVo.getSenderUuid())
+                .content(chatVo.getContent())
+                .roomNumber(chatVo.getRoomNumber())
+                .build();
+            chatRepository.save(chat).subscribe();
+        } catch (Exception e) {
+            log.error("채팅 보내기 중 오류 발생: {}", chatVo);
+            throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
+        }
+
     }
     @Override
     public Flux<ChatVo> getChat(String roomNumber) {
         return chatRepository.findChatByRoomNumber(roomNumber)
-            .subscribeOn(Schedulers.boundedElastic());
+            .subscribeOn(Schedulers.boundedElastic())
+            .onErrorResume(throwable -> {
+                log.error("채팅 불러오기 중 오류 발생: {}", roomNumber, throwable);
+                return Flux.error(new CustomException(ResponseStatus.LOAD_CHAT_FAILED));
+            });
     }
 }

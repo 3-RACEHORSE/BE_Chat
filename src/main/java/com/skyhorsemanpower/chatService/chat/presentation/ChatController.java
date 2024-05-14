@@ -41,15 +41,17 @@ public class ChatController {
     }
 
     @PostMapping
-    public void sendChat(@RequestBody ChatVo chatvo) {
+    public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo) {
         log.info("chatVo: {}", chatvo);
         chatService.sendChat(chatvo);
+        return new SuccessResponse<>(null);
     }
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ChatVo> getChat(
+    public SuccessResponse<Flux<ChatVo>> getChat(
         @PathVariable(value = "roomNumber") String roomNumber) {
         log.info("roomNumber: {}", roomNumber);
-        return chatService.getChat(roomNumber);
+        Flux<ChatVo> chatVo = chatService.getChat(roomNumber);
+        return new SuccessResponse<>(chatVo);
     }
 }
