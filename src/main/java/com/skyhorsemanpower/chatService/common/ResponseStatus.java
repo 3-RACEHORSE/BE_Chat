@@ -20,8 +20,10 @@ public enum ResponseStatus {
 //    /**
 //     * 900: 기타 에러
 //     */
-    BAD_REQUEST(405, "최소 두명 이상이 있어야합니다."),
-    INTERNAL_SERVER_ERROR(500, "Internal server error");
+    BAD_REQUEST(400, "최소 두명 이상이 있어야합니다."),
+    INTERNAL_SERVER_ERROR(500, "Internal server error"),
+    SAVE_CHAT_FAILED(500, "채팅 저장 실패"),
+    LOAD_CHAT_FAILED(500,"채팅 불러오기 실패");
     private final int code;
     private final String message;
 
