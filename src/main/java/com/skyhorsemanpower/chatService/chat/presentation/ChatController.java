@@ -8,6 +8,8 @@ import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.common.ExceptionResponse;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,11 +28,13 @@ import reactor.core.publisher.Flux;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/chat")
+@Tag(name = "채팅", description = "채팅 관련 API")
 @Slf4j
 public class ChatController {
     private final ChatService chatService;
 
     @PostMapping("/room")
+    @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
     public ResponseEntity<?> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
         List<ChatMemberDto> chatMemberDtos = addChatRoomRequestVo.toChatMemberDto();
         boolean result = chatService.createChatRoom(chatMemberDtos);
@@ -42,6 +46,7 @@ public class ChatController {
     }
 
     @PostMapping
+    @Operation(summary = "채팅 메시지 전송", description = "채팅방 안에서 사용자가 채팅을 보내기")
     public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo) {
         log.info("chatVo: {}", chatvo);
         chatService.sendChat(chatvo);
@@ -49,6 +54,7 @@ public class ChatController {
     }
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "채팅방 메시지 조회", description = "채팅방에서 전체 메시지를 조회")
     public SuccessResponse<Flux<ChatVo>> getChat(
         @PathVariable(value = "roomNumber") String roomNumber) {
         log.info("roomNumber: {}", roomNumber);
@@ -57,6 +63,7 @@ public class ChatController {
     }
 
     @GetMapping("/rooms")
+    @Operation(summary = "채팅방 리스트 조회", description = "채팅방, 마지막 채팅, 마지막 채팅 시간을 조회")
     public SuccessResponse<List<ChatRoomWithLastChatDto>> getAllChatRooms(@RequestParam String memberUuid) {
         // 사용자의 채팅방 목록을 가져와서 각 채팅방의 마지막 채팅을 포함하여 반환
         List<ChatRoomWithLastChatDto> chatRoomsWithLastChatDto = chatService.getAllChatRoomsWithLastChat(memberUuid);
