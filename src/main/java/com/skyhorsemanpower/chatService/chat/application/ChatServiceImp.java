@@ -1,6 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomWithLastChatDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -8,8 +9,10 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -72,4 +75,32 @@ public class ChatServiceImp implements ChatService{
                 return Flux.error(new CustomException(ResponseStatus.LOAD_CHAT_FAILED));
             });
     }
+
+    @Override
+    public Flux<Chat> getLastChatInRoom(String roomNumber) {
+        // roomId에 해당하는 채팅방의 마지막 채팅을 가져오는 비동기 작업
+        return chatRepository.findLastChatByRoomNumber(roomNumber);
+    }
+
+    @Override
+    public List<ChatRoomWithLastChatDto> getAllChatRoomsWithLastChat(String memberUuid) {
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllByMemberUuid(memberUuid);
+
+        List<ChatRoomWithLastChatDto> chatRoomsWithLastChatDto = new ArrayList<>();
+        for (ChatRoom chatRoom : chatRooms) {
+            String roomNumber = chatRoom.getRoomNumber();
+            log.info(roomNumber);
+            Chat lastChat = chatRepository.findLastChatByRoomNumber(roomNumber).blockLast(); // 동기적으로 마지막 채팅 가져오기
+            ChatRoomWithLastChatDto chatRoomWithLastChatDto = new ChatRoomWithLastChatDto();
+            chatRoomWithLastChatDto.builder()
+                .roomNumber(lastChat.getRoomNumber())
+                .content(lastChat.getContent())
+                .lastChatTime(lastChat.getCreatedAt())
+                .build();
+            chatRoomsWithLastChatDto.add(chatRoomWithLastChatDto);
+        }
+
+        return chatRoomsWithLastChatDto;
+    }
+
 }
