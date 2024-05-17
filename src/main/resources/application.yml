@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: chat-service
+  profiles:
+    active: none
+  config:
+    import: optional:configserver:http://43.203.131.185:8071
+
+  cloud:
+    config:
+      profile: ${PROFILE}
+
+encrypt:
+  key: ${ENCRYPT_KEY}

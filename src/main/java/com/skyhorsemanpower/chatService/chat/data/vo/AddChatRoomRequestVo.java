@@ -9,22 +9,22 @@ import lombok.Getter;
 
 @Getter
 public class AddChatRoomRequestVo {
-    private List<String> chatUserUuids;
+    private List<String> memberUuids;
 
     public AddChatRoomRequestVo() {
     }
 
     @Builder
-    public AddChatRoomRequestVo(List<String> chatUserUuids) {
-        this.chatUserUuids = chatUserUuids;
+    public AddChatRoomRequestVo(List<String> memberUuids) {
+        this.memberUuids = memberUuids;
     }
 
     public List<ChatMemberDto> toChatMemberDto() {
-        if (chatUserUuids.size() < 2) {
+        if (memberUuids.size() < 2) {
             throw new IllegalArgumentException("최소 2명이 있어야 채팅방을 생성할 수 있습니다");
         }
         List<ChatMemberDto> chatMemberDtos = new ArrayList<>();
-        for (String uuid : chatUserUuids) {
+        for (String uuid : memberUuids) {
             chatMemberDtos.add(ChatMemberDto.builder()
                 .memberUuid(uuid)
                 .build());

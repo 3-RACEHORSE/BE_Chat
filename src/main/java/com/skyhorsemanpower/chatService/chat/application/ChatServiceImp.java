@@ -2,21 +2,29 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomWithLastChatDto;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.core.publisher.Sinks.Many;
 import reactor.core.scheduler.Schedulers;
 
 @Service
@@ -25,6 +33,8 @@ import reactor.core.scheduler.Schedulers;
 public class ChatServiceImp implements ChatService{
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
+    private final ConcurrentHashMap<String, Many<ChatVo>> latestMessages;
+
     @Override
     public boolean createChatRoom(List<ChatMemberDto> chatMemberDtos) {
         if (chatMemberDtos.size() < 2) {
@@ -58,6 +68,7 @@ public class ChatServiceImp implements ChatService{
                 .senderUuid(chatVo.getSenderUuid())
                 .content(chatVo.getContent())
                 .roomNumber(chatVo.getRoomNumber())
+                .createdAt(LocalDateTime.now())
                 .build();
             chatRepository.save(chat).subscribe();
         } catch (Exception e) {
@@ -77,30 +88,12 @@ public class ChatServiceImp implements ChatService{
     }
 
     @Override
-    public Flux<Chat> getLastChatInRoom(String roomNumber) {
-        // roomId에 해당하는 채팅방의 마지막 채팅을 가져오는 비동기 작업
-        return chatRepository.findLastChatByRoomNumber(roomNumber);
+    public Mono<ChatVo> getLastChat(String roomNumber) {
+        return chatRepository.findFirstByRoomNumberOrderByCreatedAtDesc(roomNumber)
+            .subscribeOn(Schedulers.boundedElastic())
+            .onErrorResume(throwable -> {
+                log.error("채팅 불러오기 중 오류 발생: {}", roomNumber, throwable);
+                return Mono.error(new CustomException(ResponseStatus.LOAD_CHAT_FAILED));
+            });
     }
-
-    @Override
-    public List<ChatRoomWithLastChatDto> getAllChatRoomsWithLastChat(String memberUuid) {
-        List<ChatRoom> chatRooms = chatRoomRepository.findAllByMemberUuid(memberUuid);
-
-        List<ChatRoomWithLastChatDto> chatRoomsWithLastChatDto = new ArrayList<>();
-        for (ChatRoom chatRoom : chatRooms) {
-            String roomNumber = chatRoom.getRoomNumber();
-            log.info(roomNumber);
-            Chat lastChat = chatRepository.findLastChatByRoomNumber(roomNumber).blockLast(); // 동기적으로 마지막 채팅 가져오기
-            ChatRoomWithLastChatDto chatRoomWithLastChatDto = new ChatRoomWithLastChatDto();
-            chatRoomWithLastChatDto.builder()
-                .roomNumber(lastChat.getRoomNumber())
-                .content(lastChat.getContent())
-                .lastChatTime(lastChat.getCreatedAt())
-                .build();
-            chatRoomsWithLastChatDto.add(chatRoomWithLastChatDto);
-        }
-
-        return chatRoomsWithLastChatDto;
-    }
-
 }
