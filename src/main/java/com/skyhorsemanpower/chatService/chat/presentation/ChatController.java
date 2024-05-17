@@ -10,12 +10,12 @@ import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
 @RestController
@@ -63,11 +62,18 @@ public class ChatController {
         return new SuccessResponse<>(chatVo);
     }
 
-    @GetMapping(value = "/list/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "채팅방 마지막 메시지 조회", description = "채팅방 리스트에서 마지막 메시지를 조회")
-    public Mono<SuccessResponse<ChatVo>> getLastChat(@PathVariable(value = "roomNumber") String roomNumber) {
-        log.info("roomNumber: {}", roomNumber);
-        return chatService.getLastChat(roomNumber)
-            .map(chatVo -> new SuccessResponse<>(chatVo));
+    @GetMapping("/rooms")
+    @Operation(summary = "채팅방 리스트 조회", description = "채팅방, 마지막 채팅, 마지막 채팅 시간을 조회")
+    public SuccessResponse<List<ChatRoomWithLastChatDto>> getAllChatRooms(@RequestParam String memberUuid) {
+        // 사용자의 채팅방 목록을 가져와서 각 채팅방의 마지막 채팅을 포함하여 반환
+        List<ChatRoomWithLastChatDto> chatRoomsWithLastChatDto = chatService.getAllChatRoomsWithLastChat(memberUuid);
+        return new SuccessResponse<>(chatRoomsWithLastChatDto);
+    }
+
+    // WebSocket 핸들러
+    @MessageMapping("/new-chat")
+    public void handleNewChat(ChatVo chatVo) {
+        // 새로운 채팅을 받았을 때 처리 로직
+        chatService.sendChat(chatVo);
     }
 }
