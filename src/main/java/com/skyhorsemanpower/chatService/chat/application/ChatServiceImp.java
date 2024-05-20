@@ -1,7 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomWithLastChatDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -9,12 +9,16 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
@@ -22,50 +26,82 @@ import reactor.core.scheduler.Schedulers;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ChatServiceImp implements ChatService{
+public class ChatServiceImp implements ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+
     @Override
     public boolean createChatRoom(List<ChatMemberDto> chatMemberDtos) {
         if (chatMemberDtos.size() < 2) {
-            throw new IllegalArgumentException("최소 2명의 회원이 필요합니다.");
+            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
         }
 
         try {
             String roomNumber = UUID.randomUUID().toString();
+            Set<String> memberUuids = chatMemberDtos.stream()
+                .map(ChatMemberDto::getMemberUuid)
+                .collect(Collectors.toSet());
 
-            for (ChatMemberDto chatMemberDto : chatMemberDtos) { // 리스트에서 꺼내어 반복
-                String userUuid = chatMemberDto.getMemberUuid();
+            ChatRoom chatRoom = ChatRoom.builder()
+                .roomNumber(roomNumber)
+                .memberUuids(memberUuids)
+                .build();
 
-                ChatRoom chatRoom = ChatRoom.builder()
-                    .roomNumber(roomNumber)
-                    .memberUuid(userUuid)
-                    .build();
-
-                chatRoomRepository.save(chatRoom);
-            }
-
+            chatRoomRepository.save(chatRoom);
             return true;
         } catch (Exception e) {
-            return false;
+            throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }
     }
+
     @Override
     public void sendChat(ChatVo chatVo) {
         log.info("chatVo: {}", chatVo);
         try {
+            // 새 채팅 메시지 생성 및 저장
             Chat chat = Chat.builder()
                 .senderUuid(chatVo.getSenderUuid())
                 .content(chatVo.getContent())
                 .roomNumber(chatVo.getRoomNumber())
+                .createdAt(LocalDateTime.now())
                 .build();
             chatRepository.save(chat).subscribe();
+
+            // 마지막 메시지 및 시간 업데이트
+            Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
+            if (chatRoomOpt.isPresent()) {
+                ChatRoom chatRoom = chatRoomOpt.get();
+                chatRoom.updateLastMessage(chatVo.getContent(), LocalDateTime.now());
+                chatRoomRepository.save(chatRoom);
+
+                // 사용자에게 실시간으로 메시지 전송 및 리스트 재정렬
+                List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
+                userChatRooms.sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed());
+
+                List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
+                    .map(ChatRoomListDto::fromEntity)
+                    .collect(Collectors.toList());
+
+                log.info("정렬: {}", chatRoomListDtos);
+
+                // 사용자의 모든 채팅방 목록을 재정렬 후 전송
+                for (ChatRoom room : userChatRooms) {
+                    for (String memberUuid : room.getMemberUuids()) {
+                        log.info("프론트에게 memberUuid에 맞춰 보내기: {}", memberUuid);
+                        messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
+                    }
+                }
+            } else {
+                log.error("채팅방을 찾을 수 없습니다: {}", chatVo.getRoomNumber());
+                throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
+            }
         } catch (Exception e) {
-            log.error("채팅 보내기 중 오류 발생: {}", chatVo);
+            log.error("채팅 보내기 중 오류 발생: {}", chatVo, e);
             throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
         }
-
     }
+
     @Override
     public Flux<ChatVo> getChat(String roomNumber) {
         return chatRepository.findChatByRoomNumber(roomNumber)
@@ -77,30 +113,9 @@ public class ChatServiceImp implements ChatService{
     }
 
     @Override
-    public Flux<Chat> getLastChatInRoom(String roomNumber) {
-        // roomId에 해당하는 채팅방의 마지막 채팅을 가져오는 비동기 작업
-        return chatRepository.findLastChatByRoomNumber(roomNumber);
+    public Flux<ChatRoomListDto> getChatRoomsByUserUuid(String userUuid) {
+        return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
+            .sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed())
+            .map(ChatRoomListDto::fromEntity);
     }
-
-    @Override
-    public List<ChatRoomWithLastChatDto> getAllChatRoomsWithLastChat(String memberUuid) {
-        List<ChatRoom> chatRooms = chatRoomRepository.findAllByMemberUuid(memberUuid);
-
-        List<ChatRoomWithLastChatDto> chatRoomsWithLastChatDto = new ArrayList<>();
-        for (ChatRoom chatRoom : chatRooms) {
-            String roomNumber = chatRoom.getRoomNumber();
-            log.info(roomNumber);
-            Chat lastChat = chatRepository.findLastChatByRoomNumber(roomNumber).blockLast(); // 동기적으로 마지막 채팅 가져오기
-            ChatRoomWithLastChatDto chatRoomWithLastChatDto = new ChatRoomWithLastChatDto();
-            chatRoomWithLastChatDto.builder()
-                .roomNumber(lastChat.getRoomNumber())
-                .content(lastChat.getContent())
-                .lastChatTime(lastChat.getCreatedAt())
-                .build();
-            chatRoomsWithLastChatDto.add(chatRoomWithLastChatDto);
-        }
-
-        return chatRoomsWithLastChatDto;
-    }
-
 }

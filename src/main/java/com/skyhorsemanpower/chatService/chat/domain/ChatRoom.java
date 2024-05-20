@@ -1,11 +1,19 @@
 package com.skyhorsemanpower.chatService.chat.domain;
 
 import com.skyhorsemanpower.chatService.common.CommonCreateTime;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,19 +21,31 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Getter
-public class ChatRoom extends CommonCreateTime {
+public class ChatRoom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String memberUuid;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "chat_room_members", joinColumns = @JoinColumn(name = "chat_room_id"))
+    @Column(name = "member_uuid")
+    private Set<String> memberUuids;
 
-    private String roomNumber; // 채팅방 번호는 부족할수도 있어서 랜덤으로 조합해서 사용(String)
+    private String roomNumber;
+    private String lastMessage;
+    private LocalDateTime lastMessageTime;
 
     @Builder
-    public ChatRoom(Long id, String memberUuid, String roomNumber) {
+    public ChatRoom(Long id, Set<String> memberUuids, String roomNumber, String lastMessage, LocalDateTime lastMessageTime) {
         this.id = id;
-        this.memberUuid = memberUuid;
+        this.memberUuids = memberUuids;
         this.roomNumber = roomNumber;
+        this.lastMessage = lastMessage;
+        this.lastMessageTime = lastMessageTime;
+    }
+
+    public void updateLastMessage(String lastMessage, LocalDateTime lastMessageTime) {
+        this.lastMessage = lastMessage;
+        this.lastMessageTime = lastMessageTime;
     }
 }
