@@ -46,8 +46,6 @@ public class ChatServiceImp implements ChatService {
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
                 .memberUuids(memberUuids)
-                .lastMessage("")
-                .lastMessageTime(LocalDateTime.now())
                 .build();
 
             chatRoomRepository.save(chatRoom);
@@ -117,6 +115,7 @@ public class ChatServiceImp implements ChatService {
     @Override
     public Flux<ChatRoomListDto> getChatRoomsByUserUuid(String userUuid) {
         return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
+            .sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed())
             .map(ChatRoomListDto::fromEntity);
     }
 }

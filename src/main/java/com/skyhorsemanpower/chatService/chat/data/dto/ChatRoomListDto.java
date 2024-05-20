@@ -23,7 +23,7 @@ public class ChatRoomListDto {
             .roomNumber(chatRoom.getRoomNumber())
             .lastMessage(chatRoom.getLastMessage())
             .lastMessageTime(chatRoom.getLastMessageTime())
-            .memberUuids(chatRoom.getMemberUuids())
+            .memberUuids(chatRoom.getMemberUuids()) // 상대방 프로필을 띄우려고 일단 uuid 다 들고 옴
             .build();
     }
 }

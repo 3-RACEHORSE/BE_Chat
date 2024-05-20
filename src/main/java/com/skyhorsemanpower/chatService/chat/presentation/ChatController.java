@@ -5,6 +5,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.common.ChatWebSocketHandler;
 import com.skyhorsemanpower.chatService.common.ExceptionResponse;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
@@ -31,6 +32,7 @@ import reactor.core.publisher.Flux;
 @Slf4j
 public class ChatController {
     private final ChatService chatService;
+    private final ChatWebSocketHandler webSocketHandler;
 
     @PostMapping("/room")
     @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
@@ -64,6 +66,7 @@ public class ChatController {
     @GetMapping("/chatRooms")
     @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
     public Flux<ChatRoomListDto> getChatRooms(@RequestParam String userUuid) {
+        webSocketHandler.sendChatRoomsUpdate(userUuid);
         return chatService.getChatRoomsByUserUuid(userUuid);
     }
 
