@@ -34,7 +34,7 @@ public class ChatServiceImp implements ChatService {
     @Override
     public boolean createChatRoom(List<ChatMemberDto> chatMemberDtos) {
         if (chatMemberDtos.size() < 2) {
-            throw new IllegalArgumentException("최소 2명의 회원이 필요합니다.");
+            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
         }
 
         try {
@@ -53,8 +53,7 @@ public class ChatServiceImp implements ChatService {
             chatRoomRepository.save(chatRoom);
             return true;
         } catch (Exception e) {
-            log.error("채팅방 생성 중 오류 발생", e);
-            return false;
+            throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }
     }
 
@@ -97,7 +96,7 @@ public class ChatServiceImp implements ChatService {
                 }
             } else {
                 log.error("채팅방을 찾을 수 없습니다: {}", chatVo.getRoomNumber());
-                throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
+                throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
             }
         } catch (Exception e) {
             log.error("채팅 보내기 중 오류 발생: {}", chatVo, e);
