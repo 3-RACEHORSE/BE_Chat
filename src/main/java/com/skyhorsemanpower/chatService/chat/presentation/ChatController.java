@@ -27,7 +27,7 @@ import reactor.core.publisher.Flux;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/v1/chat")
+@RequestMapping("/api/v1/authorization/chat")
 @Tag(name = "채팅", description = "채팅 관련 API")
 @Slf4j
 public class ChatController {
