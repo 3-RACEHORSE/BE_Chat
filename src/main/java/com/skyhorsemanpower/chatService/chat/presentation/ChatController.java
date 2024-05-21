@@ -2,7 +2,6 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;

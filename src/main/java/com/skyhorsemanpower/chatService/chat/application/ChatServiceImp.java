@@ -60,6 +60,7 @@ public class ChatServiceImp implements ChatService {
     public void sendChat(ChatVo chatVo) {
         log.info("chatVo: {}", chatVo);
         try {
+
             // 새 채팅 메시지 생성 및 저장
             Chat chat = Chat.builder()
                 .senderUuid(chatVo.getSenderUuid())
@@ -68,17 +69,21 @@ public class ChatServiceImp implements ChatService {
                 .createdAt(LocalDateTime.now())
                 .build();
             chatRepository.save(chat).subscribe();
+            chatVo.setCreatedAt(chat.getCreatedAt());
 
             // 마지막 메시지 및 시간 업데이트
             Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
             if (chatRoomOpt.isPresent()) {
                 ChatRoom chatRoom = chatRoomOpt.get();
-                chatRoom.updateLastMessage(chatVo.getContent(), chatVo.getCreatedAt());
+                log.info("chatVo: {}", chatVo);
+                log.info(String.valueOf(chatVo.getCreatedAt()));
+                log.info(String.valueOf(chatVo.getContent()));
+                chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
                 chatRoomRepository.save(chatRoom);
 
                 // 사용자에게 실시간으로 메시지 전송 및 리스트 재정렬
                 List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
-                userChatRooms.sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed());
+                userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
 
                 List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
                     .map(ChatRoomListDto::fromEntity)
@@ -116,13 +121,16 @@ public class ChatServiceImp implements ChatService {
     @Override
     public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
         return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
-            .sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed())
+            .sort(Comparator.comparing(
+                ChatRoom::getLastChatTime,
+                Comparator.nullsLast(Comparator.reverseOrder())
+            ))
             .map(chatRoom -> {
                 String otherUserUuid = null;
                 for (String uuid : chatRoom.getMemberUuids()) {
                     if (!uuid.equals(userUuid)) {
                         otherUserUuid = uuid;
-                        break;
+                        break; // userUuid가 아닌 첫 번째 값을 찾으면 루프를 종료합니다.
                     }
                 }
                 return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);

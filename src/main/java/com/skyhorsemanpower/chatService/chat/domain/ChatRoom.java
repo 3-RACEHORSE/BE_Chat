@@ -32,20 +32,20 @@ public class ChatRoom {
     private Set<String> memberUuids;
 
     private String roomNumber;
-    private String lastMessage;
-    private LocalDateTime lastMessageTime;
+    private String lastChat;
+    private LocalDateTime lastChatTime;
 
     @Builder
-    public ChatRoom(Long id, Set<String> memberUuids, String roomNumber, String lastMessage, LocalDateTime lastMessageTime) {
+    public ChatRoom(Long id, Set<String> memberUuids, String roomNumber, String lastChat, LocalDateTime lastChatTime) {
         this.id = id;
         this.memberUuids = memberUuids;
         this.roomNumber = roomNumber;
-        this.lastMessage = lastMessage;
-        this.lastMessageTime = lastMessageTime;
+        this.lastChat = lastChat;
+        this.lastChatTime = lastChatTime;
     }
 
-    public void updateLastMessage(String lastMessage, LocalDateTime lastMessageTime) {
-        this.lastMessage = lastMessage;
-        this.lastMessageTime = lastMessageTime;
+    public void updateLastChat(String lastChat, LocalDateTime lastChatTime) {
+        this.lastChat = lastChat;
+        this.lastChatTime = lastChatTime;
     }
 }
