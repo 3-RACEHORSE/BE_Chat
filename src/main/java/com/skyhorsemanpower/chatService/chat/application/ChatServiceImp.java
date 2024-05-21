@@ -72,7 +72,7 @@ public class ChatServiceImp implements ChatService {
             Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
             if (chatRoomOpt.isPresent()) {
                 ChatRoom chatRoom = chatRoomOpt.get();
-                chatRoom.updateLastMessage(chatVo.getContent(), LocalDateTime.now());
+                chatRoom.updateLastMessage(chatVo.getContent(), chatVo.getCreatedAt());
                 chatRoomRepository.save(chatRoom);
 
                 // 사용자에게 실시간으로 메시지 전송 및 리스트 재정렬
