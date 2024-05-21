@@ -2,6 +2,7 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -113,9 +114,18 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public Flux<ChatRoomListDto> getChatRoomsByUserUuid(String userUuid) {
+    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
         return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
             .sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed())
-            .map(ChatRoomListDto::fromEntity);
+            .map(chatRoom -> {
+                String otherUserUuid = null;
+                for (String uuid : chatRoom.getMemberUuids()) {
+                    if (!uuid.equals(userUuid)) {
+                        otherUserUuid = uuid;
+                        break;
+                    }
+                }
+                return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
+            });
     }
 }
