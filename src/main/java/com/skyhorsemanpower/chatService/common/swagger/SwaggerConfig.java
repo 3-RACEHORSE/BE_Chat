@@ -14,10 +14,6 @@ import org.springframework.context.annotation.Configuration;
     info = @Info(
         title = "Member Service API",
         version = "v1"
-    ),
-    servers = @Server(
-        url = "http://localhost:8080",
-        description = "Local Server"
     )
 )
 
