@@ -11,4 +11,8 @@ public class ChatVo {
     private String content;
     private String roomNumber;
     private LocalDateTime createdAt;
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

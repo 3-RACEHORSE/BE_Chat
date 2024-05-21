@@ -1,7 +1,7 @@
 package com.skyhorsemanpower.chatService.common;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,7 +31,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     // 채팅 목록을 클라이언트에게 전송하는 메서드
     public void sendChatRoomsUpdate(String userUuid) {
-        List<ChatRoomListDto> chatRooms = chatService.getChatRoomsByUserUuid(userUuid).collectList().block();
+        List<ChatRoomListElementDto> chatRooms = chatService.getChatRoomsByUserUuid(userUuid).collectList().block();
         // 채팅 목록을 클라이언트로 전송합니다.
     }
 }

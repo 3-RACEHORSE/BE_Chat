@@ -2,6 +2,7 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -57,7 +58,11 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void sendChat(ChatVo chatVo) {
-        log.info("chatVo: {}", chatVo);
+        boolean isMemberInChatRoom = chatRoomRepository.findByMemberUuidsContainingAndRoomNumber(
+            chatVo.getSenderUuid(), chatVo.getRoomNumber()).isPresent();
+        if (!isMemberInChatRoom) {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+        }
         try {
             // 새 채팅 메시지 생성 및 저장
             Chat chat = Chat.builder()
@@ -67,38 +72,41 @@ public class ChatServiceImp implements ChatService {
                 .createdAt(LocalDateTime.now())
                 .build();
             chatRepository.save(chat).subscribe();
-
-            // 마지막 메시지 및 시간 업데이트
-            Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
-            if (chatRoomOpt.isPresent()) {
-                ChatRoom chatRoom = chatRoomOpt.get();
-                chatRoom.updateLastMessage(chatVo.getContent(), LocalDateTime.now());
-                chatRoomRepository.save(chatRoom);
-
-                // 사용자에게 실시간으로 메시지 전송 및 리스트 재정렬
-                List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
-                userChatRooms.sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed());
-
-                List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
-                    .map(ChatRoomListDto::fromEntity)
-                    .collect(Collectors.toList());
-
-                log.info("정렬: {}", chatRoomListDtos);
-
-                // 사용자의 모든 채팅방 목록을 재정렬 후 전송
-                for (ChatRoom room : userChatRooms) {
-                    for (String memberUuid : room.getMemberUuids()) {
-                        log.info("프론트에게 memberUuid에 맞춰 보내기: {}", memberUuid);
-                        messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
-                    }
-                }
-            } else {
-                log.error("채팅방을 찾을 수 없습니다: {}", chatVo.getRoomNumber());
-                throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
-            }
+            chatVo.setCreatedAt(chat.getCreatedAt());
         } catch (Exception e) {
             log.error("채팅 보내기 중 오류 발생: {}", chatVo, e);
             throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
+        }
+        // 마지막 메시지 및 시간 업데이트
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
+        if (chatRoomOpt.isPresent()) {
+            ChatRoom chatRoom = chatRoomOpt.get();
+            log.info("chatVo: {}", chatVo);
+            log.info(String.valueOf(chatVo.getCreatedAt()));
+            log.info(String.valueOf(chatVo.getContent()));
+            chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
+            chatRoomRepository.save(chatRoom);
+
+            // 사용자에게 실시간으로 메시지 전송 및 리스트 재정렬
+            List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
+            userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
+
+            List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
+                .map(ChatRoomListDto::fromEntity)
+                .collect(Collectors.toList());
+
+            log.info("정렬: {}", chatRoomListDtos);
+
+            // 사용자의 모든 채팅방 목록을 재정렬 후 전송
+            for (ChatRoom room : userChatRooms) {
+                for (String memberUuid : room.getMemberUuids()) {
+                    log.info("프론트에게 memberUuid에 맞춰 보내기: {}", memberUuid);
+                    messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
+                }
+            }
+        } else {
+            log.error("채팅방을 찾을 수 없습니다: {}", chatVo.getRoomNumber());
+            throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
         }
     }
 
@@ -113,9 +121,21 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public Flux<ChatRoomListDto> getChatRoomsByUserUuid(String userUuid) {
+    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
         return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
-            .sort(Comparator.comparing(ChatRoom::getLastMessageTime).reversed())
-            .map(ChatRoomListDto::fromEntity);
+            .sort(Comparator.comparing(
+                ChatRoom::getLastChatTime,
+                Comparator.nullsLast(Comparator.reverseOrder())
+            ))
+            .map(chatRoom -> {
+                String otherUserUuid = null;
+                for (String uuid : chatRoom.getMemberUuids()) {
+                    if (!uuid.equals(userUuid)) {
+                        otherUserUuid = uuid;
+                        break; // userUuid가 아닌 첫 번째 값을 찾으면 루프를 종료합니다.
+                    }
+                }
+                return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
+            });
     }
 }
