@@ -1,5 +1,7 @@
 package com.skyhorsemanpower.chatService.review.application;
 
-public interface ReviewService {
+import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
 
+public interface ReviewService {
+    void createReview(CreateReviewDto createReviewDto);
 }
