@@ -28,6 +28,6 @@ public class AuthorizationReviewController {
         @RequestHeader String uuid,
         @RequestBody CreateReviewRequestVo createReviewRequestVo) {
         reviewService.createReview(CreateReviewDto.createReviewVoToDto(uuid, createReviewRequestVo));
-        return null;
+        return new SuccessResponse<>(null);
     }
 }

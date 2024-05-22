@@ -17,14 +17,13 @@ public class ReviewServiceImp implements ReviewService{
     @Override
     public void createReview(CreateReviewDto createReviewDto) {
         try {
-
             Review review = Review.builder()
                 .reviewWriterUuid(createReviewDto.getReviewWriterUuid())
                 .auctionUuid(createReviewDto.getAuctionUuid())
                 .reviewContent(createReviewDto.getReviewContent())
                 .reviewRate(createReviewDto.getReviewRate())
                 .build();
-            reviewRepository.save(review);
+            reviewRepository.save(review).subscribe();
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.SAVE_REVIEW_FAILED);
         }
