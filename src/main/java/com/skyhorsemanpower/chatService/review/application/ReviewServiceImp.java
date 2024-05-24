@@ -4,9 +4,11 @@ import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
 import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
+import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;
 import com.skyhorsemanpower.chatService.review.domain.Review;
 import com.skyhorsemanpower.chatService.review.infrastructure.ReviewAsyncRepository;
 import com.skyhorsemanpower.chatService.review.infrastructure.ReviewSyncRepository;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,5 +45,22 @@ public class ReviewServiceImp implements ReviewService{
             .reviewContent(review.getReviewContent())
             .reviewRate(review.getReviewRate())
             .build();
+    }
+
+    @Override
+    public List<SearchReviewWriterReviewResponseVo> searchReviewWriterReview(String reviewWriterUuid) {
+        List<Review> reviews = reviewSyncRepository.findAllByReviewWriterUuid(reviewWriterUuid);
+        List<SearchReviewWriterReviewResponseVo> searchReviewWriterReviewResponseVos = new ArrayList<>();
+
+        for (Review review : reviews) {
+            SearchReviewWriterReviewResponseVo responseVo = SearchReviewWriterReviewResponseVo.builder()
+                .auctionUuid(review.getAuctionUuid())
+                .reviewContent(review.getReviewContent())
+                .reviewRate(review.getReviewRate())
+                .build();
+            searchReviewWriterReviewResponseVos.add(responseVo);
+        }
+
+        return searchReviewWriterReviewResponseVos;
     }
 }

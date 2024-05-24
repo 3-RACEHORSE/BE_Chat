@@ -4,10 +4,15 @@ import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import com.skyhorsemanpower.chatService.review.application.ReviewService;
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
 import com.skyhorsemanpower.chatService.review.data.vo.CreateReviewRequestVo;
+import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
+import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -29,5 +34,12 @@ public class AuthorizationReviewController {
         @RequestBody CreateReviewRequestVo createReviewRequestVo) {
         reviewService.createReview(CreateReviewDto.createReviewVoToDto(uuid, createReviewRequestVo));
         return new SuccessResponse<>(null);
+    }
+    @GetMapping(value = "/review_writer/{review_writer_uuid}")
+    @Operation(summary = "리뷰 조회", description = "판매자의 모든 리뷰를 확인")
+    public SuccessResponse<List<SearchReviewWriterReviewResponseVo>> searchReviewWriterReview(
+        @PathVariable(value = "review_writer_uuid") String reviewWriterUuid) {
+        List<SearchReviewWriterReviewResponseVo> searchReviewWriterReviewResponseVos = reviewService.searchReviewWriterReview(reviewWriterUuid);
+        return new SuccessResponse<>(searchReviewWriterReviewResponseVos);
     }
 }

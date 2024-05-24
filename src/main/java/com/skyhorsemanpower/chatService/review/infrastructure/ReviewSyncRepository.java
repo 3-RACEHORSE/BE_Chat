@@ -10,4 +10,6 @@ import org.springframework.stereotype.Repository;
 public interface ReviewSyncRepository extends MongoRepository<Review, String> {
 
     Review findByAuctionUuid(String auctionUuid);
+
+    List<Review> findAllByReviewWriterUuid(String reviewWriterUuid);
 }
