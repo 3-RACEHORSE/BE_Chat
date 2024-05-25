@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 
 @OpenAPIDefinition(
     info = @Info(
-        title = "Member Service API",
+        title = "Chat Service API",
         version = "v1"
     )
 )

@@ -14,16 +14,13 @@ public class Review {
     private String auctionUuid;
     private Byte reviewRate;
     private String reviewContent;
-    private String reviewImage;
 
     @Builder
     public Review(String reviewWriterUuid, String auctionUuid, Byte reviewRate,
-        String reviewContent,
-        String reviewImage) {
+        String reviewContent) {
         this.reviewWriterUuid = reviewWriterUuid;
         this.auctionUuid = auctionUuid;
         this.reviewRate = reviewRate;
         this.reviewContent = reviewContent;
-        this.reviewImage = reviewImage;
     }
 }
