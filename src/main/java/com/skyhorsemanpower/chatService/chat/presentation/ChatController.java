@@ -67,9 +67,9 @@ public class ChatController {
 
     @GetMapping("/chatRooms")
     @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
-    public Flux<ChatRoomListElementDto> getChatRooms(@RequestParam String userUuid) {
-        webSocketHandler.sendChatRoomsUpdate(userUuid);
-        return chatService.getChatRoomsByUserUuid(userUuid);
+    public Flux<ChatRoomListElementDto> getChatRooms(@RequestHeader String uuid) {
+        webSocketHandler.sendChatRoomsUpdate(uuid);
+        return chatService.getChatRoomsByUserUuid(uuid);
     }
 
 }
