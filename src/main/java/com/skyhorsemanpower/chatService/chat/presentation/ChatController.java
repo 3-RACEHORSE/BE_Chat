@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,8 +49,9 @@ public class ChatController {
 
     @PostMapping
     @Operation(summary = "채팅 메시지 전송", description = "채팅방 안에서 사용자가 채팅을 보내기")
-    public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo) {
-        log.info("chatVo: {}", chatvo);
+    public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo,
+        @RequestHeader String uuid) {
+        chatvo.setSenderUuid(uuid);
         chatService.sendChat(chatvo);
         return new SuccessResponse<>(null);
     }
