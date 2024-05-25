@@ -4,7 +4,6 @@ import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import com.skyhorsemanpower.chatService.review.application.ReviewService;
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
 import com.skyhorsemanpower.chatService.review.data.vo.CreateReviewRequestVo;
-import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
 import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,11 +34,11 @@ public class AuthorizationReviewController {
         reviewService.createReview(CreateReviewDto.createReviewVoToDto(uuid, createReviewRequestVo));
         return new SuccessResponse<>(null);
     }
-    @GetMapping(value = "/review_writer/{review_writer_uuid}")
-    @Operation(summary = "리뷰 조회", description = "판매자의 모든 리뷰를 확인")
+    @GetMapping(value = "/review_writer")
+    @Operation(summary = "로그인된 회원의 리뷰 조회", description = "로그인된 회원의 모든 리뷰를 확인")
     public SuccessResponse<List<SearchReviewWriterReviewResponseVo>> searchReviewWriterReview(
-        @PathVariable(value = "review_writer_uuid") String reviewWriterUuid) {
-        List<SearchReviewWriterReviewResponseVo> searchReviewWriterReviewResponseVos = reviewService.searchReviewWriterReview(reviewWriterUuid);
+        @RequestHeader String uuid) {
+        List<SearchReviewWriterReviewResponseVo> searchReviewWriterReviewResponseVos = reviewService.searchReviewWriterReview(uuid);
         return new SuccessResponse<>(searchReviewWriterReviewResponseVos);
     }
 }

@@ -7,14 +7,14 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class SearchReviewWriterReviewResponseVo {
-    private String AuctionUuid;
-    private Byte reviewRate;
+    private String auctionUuid;
+    private int reviewRate;
     private String reviewContent;
-
+    // 경매 uuid로 조회해서 경매 제목이나 사진 같은것 담기로 수정해야할듯
     @Builder
-    public SearchReviewWriterReviewResponseVo(String auctionUuid, Byte reviewRate,
+    public SearchReviewWriterReviewResponseVo(String auctionUuid, int reviewRate,
         String reviewContent) {
-        AuctionUuid = auctionUuid;
+        this.auctionUuid = auctionUuid;
         this.reviewRate = reviewRate;
         this.reviewContent = reviewContent;
     }

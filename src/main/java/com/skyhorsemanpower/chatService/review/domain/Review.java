@@ -12,11 +12,11 @@ public class Review {
     private String id;
     private String reviewWriterUuid;
     private String auctionUuid;
-    private Byte reviewRate;
+    private int reviewRate;
     private String reviewContent;
 
     @Builder
-    public Review(String reviewWriterUuid, String auctionUuid, Byte reviewRate,
+    public Review(String reviewWriterUuid, String auctionUuid, int reviewRate,
         String reviewContent) {
         this.reviewWriterUuid = reviewWriterUuid;
         this.auctionUuid = auctionUuid;
