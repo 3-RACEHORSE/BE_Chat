@@ -1,10 +1,14 @@
 package com.skyhorsemanpower.chatService.review.infrastructure;
 
 import com.skyhorsemanpower.chatService.review.domain.Review;
-import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
+import java.util.List;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ReviewRepository extends ReactiveMongoRepository<Review, String> {
+public interface ReviewRepository extends MongoRepository<Review, String> {
 
+    Review findByAuctionUuid(String auctionUuid);
+
+    List<Review> findAllByReviewWriterUuid(String reviewWriterUuid);
 }

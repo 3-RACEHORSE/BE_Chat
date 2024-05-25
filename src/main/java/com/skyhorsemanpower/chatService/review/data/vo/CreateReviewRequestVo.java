@@ -5,6 +5,6 @@ import lombok.Getter;
 @Getter
 public class CreateReviewRequestVo {
     private String auctionUuid;
-    private Byte reviewRate;
+    private int reviewRate;
     private String reviewContent;
 }

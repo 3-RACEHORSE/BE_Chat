@@ -3,8 +3,12 @@ package com.skyhorsemanpower.chatService.review.application;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
+import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
+import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;
 import com.skyhorsemanpower.chatService.review.domain.Review;
 import com.skyhorsemanpower.chatService.review.infrastructure.ReviewRepository;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,9 +27,44 @@ public class ReviewServiceImp implements ReviewService{
                 .reviewContent(createReviewDto.getReviewContent())
                 .reviewRate(createReviewDto.getReviewRate())
                 .build();
-            reviewRepository.save(review).subscribe();
+            reviewRepository.save(review);
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.SAVE_REVIEW_FAILED);
         }
+    }
+
+    @Override
+    public SearchAuctionReviewResponseVo searchAuctionReview(String auctionUuid) {
+
+        Review review = reviewRepository.findByAuctionUuid(auctionUuid);
+
+        return SearchAuctionReviewResponseVo.builder()
+            //Todo 나중에 uuid로 핸들을 조회해서 builder안에 uuid대신 handle과 프로필 사진을 담는 과정 추가
+            .reviewWriterUuid(review.getId())
+            //현재는 리뷰작성자 uuid를 담지만 수정 예정
+            .reviewContent(review.getReviewContent())
+            .reviewRate(review.getReviewRate())
+            .build();
+    }
+
+    @Override
+    public List<SearchReviewWriterReviewResponseVo> searchReviewWriterReview(String reviewWriterUuid) {
+        List<Review> reviews = reviewRepository.findAllByReviewWriterUuid(reviewWriterUuid);
+        List<SearchReviewWriterReviewResponseVo> searchReviewWriterReviewResponseVos = new ArrayList<>();
+        if (!reviews.isEmpty()){
+            for (Review review : reviews) {
+                SearchReviewWriterReviewResponseVo responseVo = SearchReviewWriterReviewResponseVo.builder()
+                    //Todo 현재 경매 uuid로 조회할수 없는데 경매uuid로 조회해서 제목과 필요한 값들을 넣기
+                    .auctionUuid(review.getAuctionUuid())
+                    .reviewContent(review.getReviewContent())
+                    .reviewRate(review.getReviewRate())
+                    .build();
+                searchReviewWriterReviewResponseVos.add(responseVo);
+            }
+        } else {
+            throw new CustomException(ResponseStatus.NO_DATA);
+        }
+
+        return searchReviewWriterReviewResponseVos;
     }
 }
