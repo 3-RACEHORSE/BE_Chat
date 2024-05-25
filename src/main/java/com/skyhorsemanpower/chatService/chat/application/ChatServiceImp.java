@@ -134,6 +134,7 @@ public class ChatServiceImp implements ChatService {
                     .findFirst()
                     .orElse(null);
                 return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
-            });
+            }).onErrorResume(e -> Flux.empty());
+        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
     }
 }
