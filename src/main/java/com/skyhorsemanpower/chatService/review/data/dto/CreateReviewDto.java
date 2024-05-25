@@ -11,11 +11,10 @@ import lombok.NoArgsConstructor;
 public class CreateReviewDto {
     private String reviewWriterUuid;
     private String auctionUuid;
-    private Byte reviewRate;
+    private int reviewRate;
     private String reviewContent;
-
     @Builder
-    public CreateReviewDto(String reviewWriterUuid, String auctionUuid, Byte reviewRate,
+    public CreateReviewDto(String reviewWriterUuid, String auctionUuid, int reviewRate,
         String reviewContent) {
         this.reviewWriterUuid = reviewWriterUuid;
         this.auctionUuid = auctionUuid;
