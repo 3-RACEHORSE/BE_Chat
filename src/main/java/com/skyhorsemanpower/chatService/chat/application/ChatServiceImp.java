@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 @Service
@@ -120,21 +121,18 @@ public class ChatServiceImp implements ChatService {
             });
     }
 
-    @Override
     public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
-        return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
+        return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
+            .flatMapMany(Flux::fromIterable)
             .sort(Comparator.comparing(
                 ChatRoom::getLastChatTime,
                 Comparator.nullsLast(Comparator.reverseOrder())
             ))
             .map(chatRoom -> {
-                String otherUserUuid = null;
-                for (String uuid : chatRoom.getMemberUuids()) {
-                    if (!uuid.equals(userUuid)) {
-                        otherUserUuid = uuid;
-                        break; // userUuid가 아닌 첫 번째 값을 찾으면 루프를 종료합니다.
-                    }
-                }
+                String otherUserUuid = chatRoom.getMemberUuids().stream()
+                    .filter(uuid -> !uuid.equals(userUuid))
+                    .findFirst()
+                    .orElse(null);
                 return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
             });
     }
