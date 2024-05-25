@@ -1,31 +1,14 @@
-#spring:
-#  application:
-#    name: chat-service
-#  profiles:
-#    active: none
-#  config:
-#    import: optional:configserver:http://43.203.131.185:8071
-#
-#  cloud:
-#    config:
-#      profile: ${PROFILE}
-#
-#encrypt:
-#  key: ${ENCRYPT_KEY}
-
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/chat
-    username: postgres
-    password: 1234
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    database: postgresql
+  application:
+    name: chat-service
+  profiles:
+    active: none
+  config:
+    import: optional:configserver:http://43.203.131.185:8071
 
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/chat
-      auto-index-creation: true
+  cloud:
+    config:
+      profile: ${PROFILE}
+
+encrypt:
+  key: ${ENCRYPT_KEY}
