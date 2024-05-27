@@ -8,7 +8,7 @@ import java.util.List;
 import reactor.core.publisher.Flux;
 
 public interface ChatService {
-    boolean createChatRoom(List<ChatMemberDto> chatMemberDtos);
+    void createChatRoom(List<ChatMemberDto> chatMemberDtos);
     void sendChat(ChatVo chatVo);
     Flux<ChatVo> getChat(String roomNumber);
 //    List<Flux<ChatRoomVo>> getChatRoomList(String memberUuid);

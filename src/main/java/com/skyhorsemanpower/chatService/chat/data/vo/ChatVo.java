@@ -15,4 +15,7 @@ public class ChatVo {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public void setSenderUuid(String senderUuid) {
+        this.senderUuid = senderUuid;
+    }
 }
