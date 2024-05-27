@@ -34,7 +34,7 @@ public class ChatServiceImp implements ChatService {
     private final SimpMessagingTemplate messagingTemplate;
 
     @Override
-    public boolean createChatRoom(List<ChatMemberDto> chatMemberDtos) {
+    public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
         if (chatMemberDtos.size() < 2) {
             throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
         }
@@ -51,7 +51,6 @@ public class ChatServiceImp implements ChatService {
                 .build();
 
             chatRoomRepository.save(chatRoom);
-            return true;
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }

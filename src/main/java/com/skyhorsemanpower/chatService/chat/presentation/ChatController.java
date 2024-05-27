@@ -37,14 +37,10 @@ public class ChatController {
 
     @PostMapping("/room")
     @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
-    public ResponseEntity<?> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
+    public SuccessResponse<Object> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
         List<ChatMemberDto> chatMemberDtos = addChatRoomRequestVo.toChatMemberDto();
-        boolean result = chatService.createChatRoom(chatMemberDtos);
-        if (result) {
-            return new SuccessResponse<>("요청 성공");
-        } else {
-            return new ExceptionResponse(ResponseStatus.INTERNAL_SERVER_ERROR);
-        }
+        chatService.createChatRoom(chatMemberDtos);
+        return new SuccessResponse<>(null);
     }
 
     @PostMapping
