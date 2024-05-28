@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 @Service
@@ -33,7 +34,7 @@ public class ChatServiceImp implements ChatService {
     private final SimpMessagingTemplate messagingTemplate;
 
     @Override
-    public boolean createChatRoom(List<ChatMemberDto> chatMemberDtos) {
+    public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
         if (chatMemberDtos.size() < 2) {
             throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
         }
@@ -50,7 +51,6 @@ public class ChatServiceImp implements ChatService {
                 .build();
 
             chatRoomRepository.save(chatRoom);
-            return true;
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }
@@ -120,22 +120,20 @@ public class ChatServiceImp implements ChatService {
             });
     }
 
-    @Override
     public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
-        return Flux.fromIterable(chatRoomRepository.findByMemberUuidsContaining(userUuid))
+        return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
+            .flatMapMany(Flux::fromIterable)
             .sort(Comparator.comparing(
                 ChatRoom::getLastChatTime,
                 Comparator.nullsLast(Comparator.reverseOrder())
             ))
             .map(chatRoom -> {
-                String otherUserUuid = null;
-                for (String uuid : chatRoom.getMemberUuids()) {
-                    if (!uuid.equals(userUuid)) {
-                        otherUserUuid = uuid;
-                        break; // userUuid가 아닌 첫 번째 값을 찾으면 루프를 종료합니다.
-                    }
-                }
+                String otherUserUuid = chatRoom.getMemberUuids().stream()
+                    .filter(uuid -> !uuid.equals(userUuid))
+                    .findFirst()
+                    .orElse(null);
                 return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
-            });
+            }).onErrorResume(e -> Flux.empty());
+        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
     }
 }

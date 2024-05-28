@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,20 +37,17 @@ public class ChatController {
 
     @PostMapping("/room")
     @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
-    public ResponseEntity<?> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
+    public SuccessResponse<Object> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
         List<ChatMemberDto> chatMemberDtos = addChatRoomRequestVo.toChatMemberDto();
-        boolean result = chatService.createChatRoom(chatMemberDtos);
-        if (result) {
-            return new SuccessResponse<>("요청 성공");
-        } else {
-            return new ExceptionResponse(ResponseStatus.INTERNAL_SERVER_ERROR);
-        }
+        chatService.createChatRoom(chatMemberDtos);
+        return new SuccessResponse<>(null);
     }
 
     @PostMapping
     @Operation(summary = "채팅 메시지 전송", description = "채팅방 안에서 사용자가 채팅을 보내기")
-    public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo) {
-        log.info("chatVo: {}", chatvo);
+    public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo,
+        @RequestHeader String uuid) {
+        chatvo.setSenderUuid(uuid);
         chatService.sendChat(chatvo);
         return new SuccessResponse<>(null);
     }
@@ -65,9 +63,9 @@ public class ChatController {
 
     @GetMapping("/chatRooms")
     @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
-    public Flux<ChatRoomListElementDto> getChatRooms(@RequestParam String userUuid) {
-        webSocketHandler.sendChatRoomsUpdate(userUuid);
-        return chatService.getChatRoomsByUserUuid(userUuid);
+    public Flux<ChatRoomListElementDto> getChatRooms(@RequestHeader String uuid) {
+        webSocketHandler.sendChatRoomsUpdate(uuid);
+        return chatService.getChatRoomsByUserUuid(uuid);
     }
 
 }
