@@ -50,6 +50,15 @@ dependencies {
 	implementation 'org.postgresql:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
+
+	// kafka
+	implementation 'org.springframework.kafka:spring-kafka'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	implementation 'org.springframework.cloud:spring-cloud-starter-bus-kafka'
+	implementation 'com.github.danielwegener:logback-kafka-appender:0.1.0'
+
+	// Logstash
+	implementation 'net.logstash.logback:logstash-logback-encoder:6.2'
 }
 
 tasks.named('bootBuildImage') {
