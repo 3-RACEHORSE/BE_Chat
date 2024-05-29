@@ -8,6 +8,7 @@ import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
+import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import java.time.LocalDateTime;
@@ -19,10 +20,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 @Service
@@ -32,6 +37,8 @@ public class ChatServiceImp implements ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatSyncRepository chatSyncRepository;
+    private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
 
     @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
@@ -73,6 +80,8 @@ public class ChatServiceImp implements ChatService {
                 .build();
             chatRepository.save(chat).subscribe();
             chatVo.setCreatedAt(chat.getCreatedAt());
+            log.info("메시지 발행: {}", chatVo);
+            sink.tryEmitNext(chatVo);
         } catch (Exception e) {
             log.error("채팅 보내기 중 오류 발생: {}", chatVo, e);
             throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
@@ -109,17 +118,13 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
         }
     }
-
     @Override
     public Flux<ChatVo> getChat(String roomNumber) {
-        return chatRepository.findChatByRoomNumber(roomNumber)
-            .subscribeOn(Schedulers.boundedElastic())
-            .onErrorResume(throwable -> {
-                log.error("채팅 불러오기 중 오류 발생: {}", roomNumber, throwable);
-                return Flux.error(new CustomException(ResponseStatus.LOAD_CHAT_FAILED));
-            });
+        return sink.asFlux()
+            .filter(chat -> chat.getRoomNumber().equals(roomNumber))
+            .subscribeOn(Schedulers.boundedElastic());
     }
-
+    @Override
     public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
         return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
             .flatMapMany(Flux::fromIterable)
@@ -135,5 +140,16 @@ public class ChatServiceImp implements ChatService {
                 return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
             }).onErrorResume(e -> Flux.empty());
         // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
+    }
+
+    @Override
+    public Page<ChatVo> getPreviousChat(String roomNumber, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(roomNumber);
+        if (chatRoomOpt.isPresent()) {
+            return chatSyncRepository.findByRoomNumberOrderByCreatedAtDesc(roomNumber, pageable);
+        } else {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+        }
     }
 }

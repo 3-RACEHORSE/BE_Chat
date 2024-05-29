@@ -5,6 +5,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import reactor.core.publisher.Flux;
 
 public interface ChatService {
@@ -13,4 +14,6 @@ public interface ChatService {
     Flux<ChatVo> getChat(String roomNumber);
 //    List<Flux<ChatRoomVo>> getChatRoomList(String memberUuid);
     Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid);
+
+    Page<ChatVo> getPreviousChat(String roomNumber, int page, int size);
 }
