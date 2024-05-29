@@ -9,6 +9,7 @@ import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
+import com.skyhorsemanpower.chatService.chat.infrastructure.RedisEnteringMemberRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import java.time.LocalDateTime;
@@ -38,6 +39,7 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatSyncRepository chatSyncRepository;
+    private final RedisEnteringMemberRepository redisEnteringMemberRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
 
     @Override
