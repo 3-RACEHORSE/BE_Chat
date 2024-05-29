@@ -7,10 +7,9 @@ import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.data.mongodb.repository.Tailable;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 @Repository
 public interface ChatRepository extends ReactiveMongoRepository<Chat, String> {
     @Tailable
-    @Query("{ 'roomNumber' : ?0}")
+    @Query("{ 'roomNumber' : ?0 }")
     Flux<ChatVo> findChatByRoomNumber(String roomNumber);
 }
