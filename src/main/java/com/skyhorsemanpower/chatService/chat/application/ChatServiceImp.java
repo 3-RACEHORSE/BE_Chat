@@ -1,15 +1,16 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
-import com.skyhorsemanpower.chatService.chat.infrastructure.RedisEnteringMemberRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -39,8 +41,8 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatSyncRepository chatSyncRepository;
-    private final RedisEnteringMemberRepository redisEnteringMemberRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
@@ -121,7 +123,8 @@ public class ChatServiceImp implements ChatService {
         }
     }
     @Override
-    public Flux<ChatVo> getChat(String roomNumber) {
+    public Flux<ChatVo> getChat(String roomNumber, String uuid) {
+        enteringMember(roomNumber, uuid);
         return sink.asFlux()
             .filter(chat -> chat.getRoomNumber().equals(roomNumber))
             .subscribeOn(Schedulers.boundedElastic());
@@ -154,4 +157,50 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
+
+//    @Override
+//    public void enteringMember(String uuid, String roomNumber) {
+//        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
+//        try {
+//            log.info("try 진입: roomNumber={}, uuid={}", roomNumber, uuid);
+//            EnteringMember enteringMember = EnteringMember.builder()
+//                .uuid(uuid)
+//                .roomNumber(roomNumber)
+//                .enterTime(LocalDateTime.now())
+//                .build();
+//            log.info("enteringMember : {}", enteringMember);
+//
+//            // 추가적인 로그
+//            log.info("Redis에 데이터를 저장하기 전: {}", enteringMember);
+//
+//            redisEnteringMemberRepository.save(enteringMember);
+//        } catch (Exception e) {
+//            log.error("Redis에 데이터 저장 중 오류 발생", e);
+//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
+//        }
+//    }
+    @Override
+    public void enteringMember(String uuid, String roomNumber) {
+        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
+        try {
+            // 데이터를 JSON 형식으로 변환
+            ObjectMapper objectMapper = new ObjectMapper();
+            EnteringMemberDto enteringMemberDto =
+                EnteringMemberDto.builder()
+                    .roomNumber(roomNumber)
+                    .uuid(uuid)
+                    .build();
+            String jsonData = objectMapper.writeValueAsString(enteringMemberDto);
+
+            // Redis에 데이터 저장
+            String redisKey = "room:" + roomNumber + ":member:" + uuid;
+            redisTemplate.opsForValue().set(redisKey, jsonData);
+
+        } catch (Exception e) {
+            log.error("Redis에 데이터 저장 중 오류 발생", e);
+            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
+        }
+    }
+
+
 }

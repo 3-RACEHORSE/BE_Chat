@@ -85,9 +85,10 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "채팅방 메시지 조회", description = "채팅방에서 전체 메시지를 조회")
-    public Flux<ChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber) {
-        log.info("getChat 실행: roomNumber={}", roomNumber);
-        return chatService.getChat(roomNumber);
+    public Flux<ChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        log.info("getChat 실행: roomNumber={}, uuid={}", roomNumber, uuid);
+        return chatService.getChat(roomNumber, uuid);
     }
 
 

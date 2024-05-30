@@ -19,7 +19,8 @@ public enum ResponseStatus {
     LOAD_CHAT_FAILED(500,"채팅 불러오기 실패"),
     CREATE_CHATROOM_FAILED(500,"채팅방 생성 실패"),
     CANNOT_FIND_CHATROOM(500,"채팅방 찾기 실패"),
-    SAVE_REVIEW_FAILED(500, "리뷰 저장 실패");
+    SAVE_REVIEW_FAILED(500, "리뷰 저장 실패"),
+    REDIS_DB_ERROR(500, "Redis 오류 발생");
 
 
     private final int code;
