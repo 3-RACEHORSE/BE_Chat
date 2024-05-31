@@ -91,5 +91,11 @@ public class ChatController {
         return chatService.getChat(roomNumber, uuid);
     }
 
-
+    @GetMapping(value = "/readCount/{roomNumber}")
+    @Operation(summary = "안읽은 채팅 갯수 표시", description = "채팅방 리스트에서 안읽은 채팅 갯수를 표시")
+    public SuccessResponse<Integer> unReadChatCount(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        int count = chatService.getUnreadChatCount(roomNumber, uuid);
+        return new SuccessResponse<>(count);
+    }
 }

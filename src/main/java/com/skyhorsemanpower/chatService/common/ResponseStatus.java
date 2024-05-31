@@ -20,7 +20,8 @@ public enum ResponseStatus {
     CREATE_CHATROOM_FAILED(500,"채팅방 생성 실패"),
     CANNOT_FIND_CHATROOM(500,"채팅방 찾기 실패"),
     SAVE_REVIEW_FAILED(500, "리뷰 저장 실패"),
-    REDIS_DB_ERROR(500, "Redis 오류 발생");
+    REDIS_DB_ERROR(500, "Redis 오류 발생"),
+    MONGO_DB_ERROR(500, "MongoDB 오류 발생");
 
 
     private final int code;

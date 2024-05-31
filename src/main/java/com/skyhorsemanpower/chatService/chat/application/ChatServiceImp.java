@@ -235,6 +235,10 @@ public class ChatServiceImp implements ChatService {
         Optional<ChatRoom> chatRoomOptional = chatRoomRepository.findByRoomNumber(roomNumber);
         if (chatRoomOptional.isPresent()) {
             ChatRoom chatRoom = chatRoomOptional.get();
+            if (!chatRoom.getMemberUuids().contains(uuid)) {
+                log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
+                throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+            }
             for (String memberUuid : chatRoom.getMemberUuids()) {
                 if (!memberUuid.equals(uuid)) {
                     log.info("다른 멤버 UUID 찾음: {}", memberUuid);
@@ -246,7 +250,7 @@ public class ChatServiceImp implements ChatService {
         throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
     }
 
-    public boolean isMemberDataExists(String uuid, String roomNumber) {
+    private boolean isMemberDataExists(String uuid, String roomNumber) {
         try {
             String redisKey = "room:" + roomNumber + ":member:" + uuid;
             Boolean exists = redisTemplate.hasKey(redisKey);
@@ -264,4 +268,16 @@ public class ChatServiceImp implements ChatService {
         }
     }
 
+    @Override
+    public int getUnreadChatCount(String roomNumber, String uuid) {
+        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
+        int readCount = 1;
+        try {
+            List<Chat> chats = chatSyncRepository.findAllByRoomNumberAndSenderUuidAndReadCount(
+                roomNumber, otherUuid, readCount);
+            return chats.size();
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
+    }
 }

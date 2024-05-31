@@ -18,4 +18,6 @@ public interface ChatService {
     Page<ChatVo> getPreviousChat(String roomNumber, int page, int size);
     void enteringMember(String uuid, String roomNumber);
     String findOtherMemberUuid(String uuid, String roomNumber);
+
+    int getUnreadChatCount(String roomNumber, String uuid);
 }
