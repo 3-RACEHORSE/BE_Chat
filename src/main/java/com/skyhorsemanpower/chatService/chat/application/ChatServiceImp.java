@@ -90,6 +90,7 @@ public class ChatServiceImp implements ChatService {
                     .build();
                 chatRepository.save(chat).subscribe();
                 chatVo.setCreatedAt(chat.getCreatedAt());
+                chatVo.setReadCount(chat.getReadCount());
                 log.info("메시지 발행: {}", chatVo);
                 sink.tryEmitNext(chatVo);
             } else {
@@ -103,6 +104,7 @@ public class ChatServiceImp implements ChatService {
                     .build();
                 chatRepository.save(chat).subscribe();
                 chatVo.setCreatedAt(chat.getCreatedAt());
+                chatVo.setReadCount(chat.getReadCount());
                 log.info("메시지 발행: {}", chatVo);
                 sink.tryEmitNext(chatVo);
             }
@@ -148,7 +150,10 @@ public class ChatServiceImp implements ChatService {
         enteringMember(uuid, roomNumber);
         return sink.asFlux()
             .filter(chat -> chat.getRoomNumber().equals(roomNumber))
-            .subscribeOn(Schedulers.boundedElastic());
+            .subscribeOn(Schedulers.boundedElastic())
+            .doOnTerminate(() -> log.info("Chat stream for room {} terminated.", roomNumber))
+            .doOnError(error -> log.error("Chat stream for room {} encountered error: {}", roomNumber, error.getMessage()))
+            .doFinally(signalType -> log.info("Chat stream for room {} completed with signal: {}", roomNumber, signalType));
     }
     @Override
     public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
