@@ -91,8 +91,8 @@ public class ChatServiceImp implements ChatService {
                 chatRepository.save(chat).subscribe();
                 chatVo.setCreatedAt(chat.getCreatedAt());
                 chatVo.setReadCount(chat.getReadCount());
-                log.info("메시지 발행: {}", chatVo);
-                sink.tryEmitNext(chatVo);
+//                log.info("메시지 발행: {}", chatVo);
+//                sink.tryEmitNext(chatVo);
             } else {
                 // 새 채팅 메시지 생성 및 저장
                 Chat chat = Chat.builder()
@@ -105,8 +105,8 @@ public class ChatServiceImp implements ChatService {
                 chatRepository.save(chat).subscribe();
                 chatVo.setCreatedAt(chat.getCreatedAt());
                 chatVo.setReadCount(chat.getReadCount());
-                log.info("메시지 발행: {}", chatVo);
-                sink.tryEmitNext(chatVo);
+//                log.info("메시지 발행: {}", chatVo);
+//                sink.tryEmitNext(chatVo);
             }
 
         } catch (Exception e) {
@@ -148,12 +148,14 @@ public class ChatServiceImp implements ChatService {
     @Override
     public Flux<ChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
-        return sink.asFlux()
-            .filter(chat -> chat.getRoomNumber().equals(roomNumber))
-            .subscribeOn(Schedulers.boundedElastic())
-            .doOnTerminate(() -> log.info("Chat stream for room {} terminated.", roomNumber))
-            .doOnError(error -> log.error("Chat stream for room {} encountered error: {}", roomNumber, error.getMessage()))
-            .doFinally(signalType -> log.info("Chat stream for room {} completed with signal: {}", roomNumber, signalType));
+        LocalDateTime now = LocalDateTime.now();
+        return chatRepository.findChatByRoomNumberAndCreatedAtOrAfter(roomNumber, now);
+//        return sink.asFlux()
+//            .filter(chat -> chat.getRoomNumber().equals(roomNumber))
+//            .subscribeOn(Schedulers.boundedElastic())
+//            .doOnTerminate(() -> log.info("Chat stream for room {} terminated.", roomNumber))
+//            .doOnError(error -> log.error("Chat stream for room {} encountered error: {}", roomNumber, error.getMessage()))
+//            .doFinally(signalType -> log.info("Chat stream for room {} completed with signal: {}", roomNumber, signalType));
     }
     @Override
     public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
