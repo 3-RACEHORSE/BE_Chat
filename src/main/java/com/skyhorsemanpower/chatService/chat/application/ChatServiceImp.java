@@ -26,6 +26,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -44,6 +48,7 @@ public class ChatServiceImp implements ChatService {
     private final ChatSyncRepository chatSyncRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
+    private final MongoTemplate mongoTemplate;
 
     @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
@@ -148,6 +153,7 @@ public class ChatServiceImp implements ChatService {
     @Override
     public Flux<ChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
+        changeReadCount(roomNumber, uuid);
         LocalDateTime now = LocalDateTime.now();
         return chatRepository.findChatByRoomNumberAndCreatedAtOrAfter(roomNumber, now);
 //        return sink.asFlux()
@@ -281,5 +287,22 @@ public class ChatServiceImp implements ChatService {
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
         }
+    }
+
+    public void changeReadCount(String roomNumber, String uuid) {
+        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
+        Query query = new Query();
+        query.addCriteria(Criteria.where("roomNumber").is(roomNumber)
+            .and("senderUuid").is(otherUuid));
+
+        List<Chat> chats = mongoTemplate.find(query, Chat.class);
+        if (chats.isEmpty()) {
+            return;
+        }
+
+        Update update = new Update();
+        update.set("readCount", 0);
+
+        mongoTemplate.updateMulti(query, update, Chat.class);
     }
 }
