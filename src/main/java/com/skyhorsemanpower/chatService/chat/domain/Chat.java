@@ -18,13 +18,16 @@ public class Chat {
     private String imageUrl;
     private String roomNumber;
     private LocalDateTime createdAt;
+    private int readCount;
 
     @Builder
-    public Chat(String senderUuid, String content, String imageUrl, String roomNumber, LocalDateTime createdAt) {
+    public Chat(String senderUuid, String content, String imageUrl, String roomNumber,
+        LocalDateTime createdAt, int readCount) {
         this.senderUuid = senderUuid;
         this.content = content;
         this.imageUrl = imageUrl;
         this.roomNumber = roomNumber;
         this.createdAt = createdAt;
+        this.readCount = readCount;
     }
 }
