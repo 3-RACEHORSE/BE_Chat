@@ -3,7 +3,9 @@ package com.skyhorsemanpower.chatService.chat.application;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import reactor.core.publisher.Flux;
@@ -20,4 +22,5 @@ public interface ChatService {
     String findOtherMemberUuid(String uuid, String roomNumber);
 
     int getUnreadChatCount(String roomNumber, String uuid);
+    void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto);
 }
