@@ -3,8 +3,10 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.common.ChatWebSocketHandler;
 import com.skyhorsemanpower.chatService.common.ExceptionResponse;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
@@ -20,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -85,10 +88,26 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "채팅방 메시지 조회", description = "채팅방에서 전체 메시지를 조회")
-    public Flux<ChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber) {
-        log.info("getChat 실행: roomNumber={}", roomNumber);
-        return chatService.getChat(roomNumber);
+    public Flux<ChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        log.info("getChat 실행: roomNumber={}, uuid={}", roomNumber, uuid);
+        return chatService.getChat(roomNumber, uuid);
     }
 
+    @GetMapping(value = "/readCount/{roomNumber}")
+    @Operation(summary = "안읽은 채팅 갯수 표시", description = "채팅방 리스트에서 안읽은 채팅 갯수를 표시")
+    public SuccessResponse<Integer> unReadChatCount(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        int count = chatService.getUnreadChatCount(roomNumber, uuid);
+        return new SuccessResponse<>(count);
+    }
 
+    @PutMapping("/leaveChatRoom")
+    @Operation(summary = "입장정보 삭제", description = "검색한 곳에서 상태가 바뀌면 beforeUnload를 실행시키고\n\n"
+        + "performance.navigation.type이 1(새로고침)인 경우를 제외하면 된다고 함")
+    public SuccessResponse<Object> leaveChatRoom(@RequestBody LeaveChatRoomRequestVo leaveChatRoomRequestVo) {
+        LeaveChatRoomDto leaveChatRoomDto = leaveChatRoomRequestVo.toLeaveChatRoomDto();
+        chatService.leaveChatRoom(leaveChatRoomDto);
+        return new SuccessResponse<>(null);
+    }
 }
