@@ -16,6 +16,7 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.LastChatRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
+import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -285,5 +288,27 @@ public class ChatServiceImp implements ChatService {
         String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
         redisTemplate.delete(redisKey);
         log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
+    }
+    @Scheduled(cron = "0 0 1 * * ?") // 매일 1시에 실행
+    @Transactional
+    @Override
+    public void deleteNotLastChats() {
+        List<ChatRoom> chatRooms = chatRoomRepository.findAll();
+
+        // 각 채팅 방의 가장 최근 채팅을 제외한 나머지 삭제
+        for (ChatRoom chatRoom : chatRooms) {
+            String roomNumber = chatRoom.getRoomNumber();
+            log.info("Starting cleanup for roomNumber: {}", roomNumber);
+
+            Optional<LastChat> lastChat = lastChatRepository.findFirstByRoomNumberOrderByLastChatTimeDesc(roomNumber);
+            lastChat.ifPresent(chat -> {
+                log.info("Found last chat in roomNumber: {} with id: {} and content: {}", roomNumber, chat.getId(), chat.getContent());
+                Query query = new Query();
+                query.addCriteria(Criteria.where("roomNumber").is(roomNumber).and("_id").ne(new ObjectId(chat.getId())));
+
+                mongoTemplate.remove(query, LastChat.class);
+                log.info("Deleted non-last chats in roomNumber: {}", roomNumber);
+            });
+        }
     }
 }
