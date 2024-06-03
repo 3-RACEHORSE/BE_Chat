@@ -9,9 +9,11 @@ import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
+import com.skyhorsemanpower.chatService.chat.domain.LastChat;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
+import com.skyhorsemanpower.chatService.chat.infrastructure.LastChatRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import java.time.LocalDateTime;
@@ -45,6 +47,7 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatSyncRepository chatSyncRepository;
+    private final LastChatRepository lastChatRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
     private final MongoTemplate mongoTemplate;
@@ -110,11 +113,22 @@ public class ChatServiceImp implements ChatService {
     }
 
     private void updateChatRoomInfo(ChatVo chatVo) {
-        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
-        if (chatRoomOpt.isPresent()) {
-            ChatRoom chatRoom = chatRoomOpt.get();
-            chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
-            chatRoomRepository.save(chatRoom);
+        try {
+            LastChat lastChat = LastChat.builder()
+                .roomNumber(chatVo.getRoomNumber())
+                .content(chatVo.getContent())
+                .lastChatTime(chatVo.getCreatedAt())
+                .build();
+            lastChatRepository.save(lastChat);
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
+    }
+//        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
+//        if (chatRoomOpt.isPresent()) {
+//            ChatRoom chatRoom = chatRoomOpt.get();
+//            chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
+//            chatRoomRepository.save(chatRoom);
 //
 //            List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
 //            userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
@@ -127,10 +141,10 @@ public class ChatServiceImp implements ChatService {
 //                    messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
 //                }
 //            }
-        } else {
-            throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
-        }
-    }
+//        } else {
+//            throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
+//        }
+//    }
     @Override
     public Flux<ChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
