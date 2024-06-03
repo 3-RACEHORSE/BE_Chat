@@ -7,7 +7,6 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
@@ -15,7 +14,6 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
-import jakarta.websocket.OnOpen;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -38,7 +36,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
@@ -118,18 +115,18 @@ public class ChatServiceImp implements ChatService {
             ChatRoom chatRoom = chatRoomOpt.get();
             chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
             chatRoomRepository.save(chatRoom);
-
-            List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
-            userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
-            List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
-                .map(ChatRoomListDto::fromEntity)
-                .collect(Collectors.toList());
-
-            for (ChatRoom room : userChatRooms) {
-                for (String memberUuid : room.getMemberUuids()) {
-                    messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
-                }
-            }
+//
+//            List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
+//            userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
+//            List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
+//                .map(ChatRoomListDto::fromEntity)
+//                .collect(Collectors.toList());
+//
+//            for (ChatRoom room : userChatRooms) {
+//                for (String memberUuid : room.getMemberUuids()) {
+//                    messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
+//                }
+//            }
         } else {
             throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
         }
