@@ -1,7 +1,7 @@
 package com.skyhorsemanpower.chatService.review.application;
 
-import com.skyhorsemanpower.chatService.common.CustomException;
-import com.skyhorsemanpower.chatService.common.ResponseStatus;
+import com.skyhorsemanpower.chatService.common.response.CustomException;
+import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
 import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
 import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;

@@ -12,6 +12,8 @@ public class ChatVo {
     private String roomNumber;
     private LocalDateTime createdAt;
     private int readCount;
+    private String handle;
+    private String profileImage;
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
@@ -23,5 +25,11 @@ public class ChatVo {
 
     public void setSenderUuid(String senderUuid) {
         this.senderUuid = senderUuid;
+    }
+
+    public void setHandle(String handle) {
+    }
+
+    public void setProfileImage(String profileImage) {
     }
 }
