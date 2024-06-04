@@ -34,7 +34,7 @@ jobs:
 
       - name: Substitute variables in application.yml
         run: |
-          apt-get install -y gettext-base
+          apt-get update && apt-get install -y gettext-base
           envsubst < src/main/resources/application.yml > src/main/resources/application.yml.temp
           mv src/main/resources/application.yml.temp src/main/resources/application.yml
 
