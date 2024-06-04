@@ -7,12 +7,14 @@ import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.common.ChatWebSocketHandler;
 import com.skyhorsemanpower.chatService.common.ExceptionResponse;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,13 +80,14 @@ public class ChatController {
 
     @GetMapping(value = "/previous/{roomNumber}")
     @Operation(summary = "채팅방 이전 메시지 조회", description = "채팅방에서 이전 메시지를 조회")
-    public SuccessResponse<Page<ChatVo>> getPreviousChat(
+    public SuccessResponse<PreviousChatResponseVo> getPreviousChat(
         @PathVariable(value = "roomNumber") String roomNumber,
+        @RequestParam LocalDateTime enterTime,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size) {
         log.info("roomNumber: {}", roomNumber);
-        Page<ChatVo> chatVos = chatService.getPreviousChat(roomNumber, page, size);
-        return new SuccessResponse<>(chatVos);
+        PreviousChatResponseVo previousChatResponseVo = chatService.getPreviousChat(roomNumber, enterTime, page, size);
+        return new SuccessResponse<>(previousChatResponseVo);
     }
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

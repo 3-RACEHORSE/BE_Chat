@@ -7,6 +7,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.domain.LastChat;
@@ -180,11 +181,16 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public Page<ChatVo> getPreviousChat(String roomNumber, int page, int size) {
+    public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(roomNumber);
         if (chatRoomOpt.isPresent()) {
-            return chatSyncRepository.findByRoomNumberOrderByCreatedAtDesc(roomNumber, pageable);
+            Page<ChatVo> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
+
+            int currentPage = page;
+            boolean hasNext = previousChat.hasNext();
+            return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
+
         } else {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
@@ -298,16 +304,14 @@ public class ChatServiceImp implements ChatService {
         // 각 채팅 방의 가장 최근 채팅을 제외한 나머지 삭제
         for (ChatRoom chatRoom : chatRooms) {
             String roomNumber = chatRoom.getRoomNumber();
-            log.info("Starting cleanup for roomNumber: {}", roomNumber);
 
             Optional<LastChat> lastChat = lastChatRepository.findFirstByRoomNumberOrderByLastChatTimeDesc(roomNumber);
             lastChat.ifPresent(chat -> {
-                log.info("Found last chat in roomNumber: {} with id: {} and content: {}", roomNumber, chat.getId(), chat.getContent());
+                log.info("마지막 채팅 roomNumber: {} id: {} content: {}", roomNumber, chat.getId(), chat.getContent());
                 Query query = new Query();
                 query.addCriteria(Criteria.where("roomNumber").is(roomNumber).and("_id").ne(new ObjectId(chat.getId())));
 
                 mongoTemplate.remove(query, LastChat.class);
-                log.info("Deleted non-last chats in roomNumber: {}", roomNumber);
             });
         }
     }
