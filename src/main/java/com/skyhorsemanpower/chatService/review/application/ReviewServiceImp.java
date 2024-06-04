@@ -9,6 +9,7 @@ import com.skyhorsemanpower.chatService.review.domain.Review;
 import com.skyhorsemanpower.chatService.review.infrastructure.ReviewRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,16 +36,19 @@ public class ReviewServiceImp implements ReviewService{
 
     @Override
     public SearchAuctionReviewResponseVo searchAuctionReview(String auctionUuid) {
-
-        Review review = reviewRepository.findByAuctionUuid(auctionUuid);
-
-        return SearchAuctionReviewResponseVo.builder()
-            //Todo 나중에 uuid로 핸들을 조회해서 builder안에 uuid대신 handle과 프로필 사진을 담는 과정 추가
-            .reviewWriterUuid(review.getId())
-            //현재는 리뷰작성자 uuid를 담지만 수정 예정
-            .reviewContent(review.getReviewContent())
-            .reviewRate(review.getReviewRate())
-            .build();
+        // Todo 판매자 정보에서 조회하는 것이라 판매자의 uuid로 경매 uuid를 조회하는 것을 실행하고 리뷰 담기
+        Optional<Review> optionalReview = reviewRepository.findByAuctionUuid(auctionUuid);
+        if(optionalReview.isPresent()) {
+            return SearchAuctionReviewResponseVo.builder()
+                //Todo 나중에 uuid로 핸들을 조회해서 builder안에 uuid대신 handle과 프로필 사진을 담는 과정 추가
+                .reviewWriterUuid(optionalReview.get().getReviewWriterUuid())
+                //현재는 리뷰작성자 uuid를 담지만 수정 예정
+                .reviewContent(optionalReview.get().getReviewContent())
+                .reviewRate(optionalReview.get().getReviewRate())
+                .build();
+        } else {
+            throw new CustomException(ResponseStatus.WRONG_REQUEST);
+        }
     }
 
     @Override

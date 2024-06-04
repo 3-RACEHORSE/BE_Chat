@@ -13,6 +13,7 @@ public enum ResponseStatus {
     SUCCESS(200, "요청에 성공했습니다."),
     NO_DATA(404, "데이터가 없습니다"),
     WRONG_CHATROOM_AND_MEMBER(400, "잘못된 채팅방과 사용자입니다"),
+    WRONG_REQUEST(400, "잘못된 요청입니다."),
     NOT_ENOUGH_MEMBERS(400, "최소 두명 이상이 있어야합니다."),
     INTERNAL_SERVER_ERROR(500, "서버 오류 발생"),
     SAVE_CHAT_FAILED(500, "채팅 저장 실패"),
