@@ -27,9 +27,4 @@ public class ChatVo {
         this.senderUuid = senderUuid;
     }
 
-    public void setHandle(String handle) {
-    }
-
-    public void setProfileImage(String profileImage) {
-    }
 }

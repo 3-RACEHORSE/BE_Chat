@@ -279,7 +279,6 @@ public class ChatServiceImp implements ChatService {
             .uri(uriBuilder -> uriBuilder.path(ServerPathEnum.GET_MEMBER_INFO.getServer() + "/{uuid}")
                 .build(uuid))
             .retrieve().toEntity(MemberInfoResponseVo.class).block();
-
         return responseEntity.getBody();
     }
 }
