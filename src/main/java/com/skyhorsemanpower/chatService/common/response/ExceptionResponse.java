@@ -1,4 +1,4 @@
-package com.skyhorsemanpower.chatService.common;
+package com.skyhorsemanpower.chatService.common.response;
 
 import lombok.Builder;
 import org.springframework.http.HttpStatus;

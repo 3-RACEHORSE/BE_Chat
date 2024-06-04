@@ -1,4 +1,6 @@
-package com.skyhorsemanpower.chatService.common;
+package com.skyhorsemanpower.chatService.common.response;
+
+import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 
 public class CustomException extends RuntimeException {
     private final ResponseStatus responseStatus;

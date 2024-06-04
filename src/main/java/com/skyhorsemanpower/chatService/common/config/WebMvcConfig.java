@@ -1,5 +1,6 @@
-package com.skyhorsemanpower.chatService.common;
+package com.skyhorsemanpower.chatService.common.config;
 
+import com.skyhorsemanpower.chatService.common.LocalDateTimeConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;

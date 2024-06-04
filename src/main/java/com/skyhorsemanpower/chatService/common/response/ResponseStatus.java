@@ -1,4 +1,4 @@
-package com.skyhorsemanpower.chatService.common;
+package com.skyhorsemanpower.chatService.common.response;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

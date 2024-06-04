@@ -2,35 +2,31 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.MemberInfoResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
-import com.skyhorsemanpower.chatService.chat.domain.LastChat;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
-import com.skyhorsemanpower.chatService.chat.infrastructure.LastChatRepository;
-import com.skyhorsemanpower.chatService.common.CustomException;
-import com.skyhorsemanpower.chatService.common.ResponseStatus;
-import jakarta.transaction.Transactional;
+import com.skyhorsemanpower.chatService.common.response.CustomException;
+import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
+import com.skyhorsemanpower.chatService.common.ServerPathEnum;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,9 +35,10 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -122,6 +119,7 @@ public class ChatServiceImp implements ChatService {
         changeReadCount(roomNumber, uuid);
         LocalDateTime now = LocalDateTime.now();
         return chatRepository.findChatByRoomNumberAndCreatedAtOrAfter(roomNumber, now);
+
 //        return sink.asFlux()
 //            .filter(chat -> chat.getRoomNumber().equals(roomNumber))
 //            .subscribeOn(Schedulers.boundedElastic())
@@ -273,5 +271,14 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.NO_DATA);
         }
     }
+    // webClient-blocking 통신으로 회원 서비스에 uuid를 이용해 handle과 프로필 이미지 데이터 요청
+    private MemberInfoResponseVo getMemberInfoByWebClientBlocking(String uuid) {
+        WebClient webClient = WebClient.create(ServerPathEnum.MEMBER_SERVER.getServer());
 
+        ResponseEntity<MemberInfoResponseVo> responseEntity = webClient.get()
+            .uri(uriBuilder -> uriBuilder.path(ServerPathEnum.GET_MEMBER_INFO.getServer() + "/{uuid}")
+                .build(uuid))
+            .retrieve().toEntity(MemberInfoResponseVo.class).block();
+        return responseEntity.getBody();
+    }
 }

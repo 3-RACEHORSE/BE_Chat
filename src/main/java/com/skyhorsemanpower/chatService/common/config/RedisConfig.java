@@ -1,4 +1,4 @@
-package com.skyhorsemanpower.chatService.common;
+package com.skyhorsemanpower.chatService.common.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
