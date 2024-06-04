@@ -1,4 +1,4 @@
-name: Chat server CI/CD with gradle
+name: Chat service CI/CD with gradle
 
 on:
   push:
@@ -61,7 +61,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build docker image
-        run: docker buildx build --platform linux/amd64,linux/arm64 -t ${{ secrets.DOCKERHUB_USERNAME }}/chat-service:latest --push -f Dockerfile .
+        run: docker build --build-arg KAFKA_BOOTSTRAP_SERVERS=${{ secrets.KAFKA_BOOTSTRAP_SERVERS }} -t ${{ secrets.DOCKERHUB_USERNAME }}/chat-service:latest -f Dockerfile .
+
+      - name: Push docker hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/chat-service:latest
 
   run-docker-image-on-ec2:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
