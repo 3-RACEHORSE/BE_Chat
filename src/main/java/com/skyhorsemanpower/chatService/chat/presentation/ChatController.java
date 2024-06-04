@@ -6,6 +6,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.common.ChatWebSocketHandler;
@@ -113,5 +114,12 @@ public class ChatController {
         LeaveChatRoomDto leaveChatRoomDto = leaveChatRoomRequestVo.toLeaveChatRoomDto();
         chatService.leaveChatRoom(leaveChatRoomDto);
         return new SuccessResponse<>(null);
+    }
+
+    @GetMapping(value = "/lastChat/{roomNumber}")
+    public SuccessResponse<LastChatVo> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        LastChatVo lastChatVo = chatService.getLastChat(uuid, roomNumber);
+        return new SuccessResponse<>(lastChatVo);
     }
 }
