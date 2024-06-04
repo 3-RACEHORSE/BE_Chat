@@ -6,14 +6,19 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
+import com.skyhorsemanpower.chatService.chat.domain.LastChat;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
+import com.skyhorsemanpower.chatService.chat.infrastructure.LastChatRepository;
 import com.skyhorsemanpower.chatService.common.CustomException;
 import com.skyhorsemanpower.chatService.common.ResponseStatus;
+import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -23,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +38,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -45,6 +52,7 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatSyncRepository chatSyncRepository;
+    private final LastChatRepository lastChatRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
     private final MongoTemplate mongoTemplate;
@@ -110,11 +118,22 @@ public class ChatServiceImp implements ChatService {
     }
 
     private void updateChatRoomInfo(ChatVo chatVo) {
-        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
-        if (chatRoomOpt.isPresent()) {
-            ChatRoom chatRoom = chatRoomOpt.get();
-            chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
-            chatRoomRepository.save(chatRoom);
+        try {
+            LastChat lastChat = LastChat.builder()
+                .roomNumber(chatVo.getRoomNumber())
+                .content(chatVo.getContent())
+                .lastChatTime(chatVo.getCreatedAt())
+                .build();
+            lastChatRepository.save(lastChat);
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
+    }
+//        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
+//        if (chatRoomOpt.isPresent()) {
+//            ChatRoom chatRoom = chatRoomOpt.get();
+//            chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
+//            chatRoomRepository.save(chatRoom);
 //
 //            List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
 //            userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
@@ -127,10 +146,10 @@ public class ChatServiceImp implements ChatService {
 //                    messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
 //                }
 //            }
-        } else {
-            throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
-        }
-    }
+//        } else {
+//            throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
+//        }
+//    }
     @Override
     public Flux<ChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
@@ -163,11 +182,15 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public Page<ChatVo> getPreviousChat(String roomNumber, int page, int size) {
+    public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(roomNumber);
         if (chatRoomOpt.isPresent()) {
-            return chatSyncRepository.findByRoomNumberOrderByCreatedAtDesc(roomNumber, pageable);
+            Page<PreviousChatDto> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
+            int currentPage = page;
+            boolean hasNext = previousChat.hasNext();
+            return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
+            // Todo 현재는 senderUuid로 반환하지만 member의 프로필 사진과 핸들 반환하게 수정
         } else {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
@@ -271,5 +294,25 @@ public class ChatServiceImp implements ChatService {
         String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
         redisTemplate.delete(redisKey);
         log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
+    }
+    @Scheduled(cron = "0 0 1 * * ?") // 매일 1시에 실행
+    @Transactional
+    @Override
+    public void deleteNotLastChats() {
+        List<ChatRoom> chatRooms = chatRoomRepository.findAll();
+
+        // 각 채팅 방의 가장 최근 채팅을 제외한 나머지 삭제
+        for (ChatRoom chatRoom : chatRooms) {
+            String roomNumber = chatRoom.getRoomNumber();
+
+            Optional<LastChat> lastChat = lastChatRepository.findFirstByRoomNumberOrderByLastChatTimeDesc(roomNumber);
+            lastChat.ifPresent(chat -> {
+                log.info("마지막 채팅 roomNumber: {} id: {} content: {}", roomNumber, chat.getId(), chat.getContent());
+                Query query = new Query();
+                query.addCriteria(Criteria.where("roomNumber").is(roomNumber).and("_id").ne(new ObjectId(chat.getId())));
+
+                mongoTemplate.remove(query, LastChat.class);
+            });
+        }
     }
 }
