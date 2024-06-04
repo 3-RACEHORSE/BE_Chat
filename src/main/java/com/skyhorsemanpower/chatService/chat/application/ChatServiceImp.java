@@ -6,6 +6,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
@@ -185,12 +186,11 @@ public class ChatServiceImp implements ChatService {
         Pageable pageable = PageRequest.of(page, size);
         Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(roomNumber);
         if (chatRoomOpt.isPresent()) {
-            Page<ChatVo> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
-
+            Page<PreviousChatDto> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
             int currentPage = page;
             boolean hasNext = previousChat.hasNext();
             return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
-
+            // Todo 현재는 senderUuid로 반환하지만 member의 프로필 사진과 핸들 반환하게 수정
         } else {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
