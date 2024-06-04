@@ -8,6 +8,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -22,6 +23,7 @@ import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -52,7 +54,6 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatSyncRepository chatSyncRepository;
-    private final LastChatRepository lastChatRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
     private final MongoTemplate mongoTemplate;
@@ -86,8 +87,6 @@ public class ChatServiceImp implements ChatService {
 
         boolean isRead = checkReadStatus(chatVo);
         saveChatMessage(chatVo, isRead);
-
-        updateChatRoomInfo(chatVo);
     }
 
     private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
@@ -117,39 +116,6 @@ public class ChatServiceImp implements ChatService {
         chatVo.setReadCount(chat.getReadCount());
     }
 
-    private void updateChatRoomInfo(ChatVo chatVo) {
-        try {
-            LastChat lastChat = LastChat.builder()
-                .roomNumber(chatVo.getRoomNumber())
-                .content(chatVo.getContent())
-                .lastChatTime(chatVo.getCreatedAt())
-                .build();
-            lastChatRepository.save(lastChat);
-        } catch (Exception e) {
-            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
-        }
-    }
-//        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(chatVo.getRoomNumber());
-//        if (chatRoomOpt.isPresent()) {
-//            ChatRoom chatRoom = chatRoomOpt.get();
-//            chatRoom.updateLastChat(chatVo.getContent(), chatVo.getCreatedAt());
-//            chatRoomRepository.save(chatRoom);
-//
-//            List<ChatRoom> userChatRooms = chatRoomRepository.findByMemberUuidsContaining(chatVo.getSenderUuid());
-//            userChatRooms.sort(Comparator.comparing(ChatRoom::getLastChatTime).reversed());
-//            List<ChatRoomListDto> chatRoomListDtos = userChatRooms.stream()
-//                .map(ChatRoomListDto::fromEntity)
-//                .collect(Collectors.toList());
-//
-//            for (ChatRoom room : userChatRooms) {
-//                for (String memberUuid : room.getMemberUuids()) {
-//                    messagingTemplate.convertAndSendToUser(memberUuid, "/queue/chat-rooms", chatRoomListDtos);
-//                }
-//            }
-//        } else {
-//            throw new CustomException(ResponseStatus.CANNOT_FIND_CHATROOM);
-//        }
-//    }
     @Override
     public Flux<ChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
@@ -295,24 +261,17 @@ public class ChatServiceImp implements ChatService {
         redisTemplate.delete(redisKey);
         log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
-    @Scheduled(cron = "0 0 1 * * ?") // 매일 1시에 실행
-    @Transactional
     @Override
-    public void deleteNotLastChats() {
-        List<ChatRoom> chatRooms = chatRoomRepository.findAll();
-
-        // 각 채팅 방의 가장 최근 채팅을 제외한 나머지 삭제
-        for (ChatRoom chatRoom : chatRooms) {
-            String roomNumber = chatRoom.getRoomNumber();
-
-            Optional<LastChat> lastChat = lastChatRepository.findFirstByRoomNumberOrderByLastChatTimeDesc(roomNumber);
-            lastChat.ifPresent(chat -> {
-                log.info("마지막 채팅 roomNumber: {} id: {} content: {}", roomNumber, chat.getId(), chat.getContent());
-                Query query = new Query();
-                query.addCriteria(Criteria.where("roomNumber").is(roomNumber).and("_id").ne(new ObjectId(chat.getId())));
-
-                mongoTemplate.remove(query, LastChat.class);
-            });
+    public LastChatVo getLastChat(String uuid, String roomNumber) {
+        Optional<Chat> optionalChat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(roomNumber);
+        if (optionalChat.isPresent()) {
+            return LastChatVo.builder()
+                .content(optionalChat.get().getContent())
+                .createdAt(optionalChat.get().getCreatedAt())
+                .build();
+        } else {
+            throw new CustomException(ResponseStatus.NO_DATA);
         }
     }
+
 }
