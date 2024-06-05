@@ -16,8 +16,7 @@ public interface ChatService {
     void sendChat(ChatVo chatVo);
     Flux<GetChatVo> getChat(String roomNumber, String uuid);
 //    List<Flux<ChatRoomVo>> getChatRoomList(String memberUuid);
-//    Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid);
-
+    List<ChatRoomListElementDto> getChatRoomsByUuid(String uuid);
     PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size);
     void enteringMember(String uuid, String roomNumber);
     String findOtherMemberUuid(String uuid, String roomNumber);
