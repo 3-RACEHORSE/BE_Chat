@@ -2,6 +2,7 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
@@ -23,6 +24,7 @@ import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.ServerPathEnum;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -151,23 +153,43 @@ public class ChatServiceImp implements ChatService {
                 return Mono.just(getChatVo);
             });
     }
-//    @Override
-//    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
-//        return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
-//            .flatMapMany(Flux::fromIterable)
-////            .sort(Comparator.comparing(
-////                ChatRoom::getLastChatTime,
-////                Comparator.nullsLast(Comparator.reverseOrder())
-////            ))
-//            .map(chatRoom -> {
-//                String otherUserUuid = chatRoom.getMemberUuids().stream()
-//                    .filter(uuid -> !uuid.equals(userUuid))
-//                    .findFirst()
-//                    .orElse(null);
-//                return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
-//            }).onErrorResume(e -> Flux.empty());
-//        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
-//    }
+    @Override
+    public List<ChatRoomListElementDto> getChatRoomsByUuid(String uuid) {
+        // uuid로 채팅방 목록 조회
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllByChatRoomMembers_MemberUuid(uuid);
+
+        List<ChatRoomListElementDto> chatRoomList = new ArrayList<>();
+        for (ChatRoom chatRoom : chatRooms) {
+            // 각 채팅방 별 마지막 메시지
+            Optional<Chat> chat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(chatRoom.getRoomNumber());
+
+            String otherUuid = findOtherMemberUuid(uuid, chatRoom.getRoomNumber());
+            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuid(otherUuid);
+            if(chatRoomMember.isPresent()) {
+                String handle = chatRoomMember.get().getMemberHandle();
+                String profileImage = chatRoomMember.get().getMemberProfileImage();
+                // 마지막 채팅이 있는 것과 없는 것 구분해서 넣기
+                ChatRoomListElementDto chatRoomElement = chat.map(ch -> ChatRoomListElementDto.builder()
+                        .roomNumber(chatRoom.getRoomNumber())
+                        .lastChat(ch.getContent())
+                        .lastChatTime(ch.getCreatedAt())
+                        .memberUuid(otherUuid)
+                        .handle(handle)
+                        .profileImage(profileImage)
+                        .build())
+                    .orElseGet(() -> ChatRoomListElementDto.builder()
+                        .roomNumber(chatRoom.getRoomNumber())
+                        .lastChat(null)
+                        .lastChatTime(null)
+                        .memberUuid(otherUuid)
+                        .handle(handle)
+                        .profileImage(profileImage)
+                        .build());
+                chatRoomList.add(chatRoomElement);
+            }
+        }
+        return chatRoomList;
+    }
 
     @Transactional
     @Override
