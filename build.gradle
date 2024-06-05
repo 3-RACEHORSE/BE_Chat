@@ -21,15 +21,15 @@ repositories {
 	mavenCentral()
 }
 
-ext {
-	set('springCloudVersion', "2022.0.5")
-}
-
-dependencyManagement {
-	imports {
-		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-	}
-}
+//ext {
+//	set('springCloudVersion', "2022.0.5")
+//}
+//
+//dependencyManagement {
+//	imports {
+//		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+//	}
+//}
 
 jar {
 	enabled = false
@@ -43,8 +43,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
-	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-	implementation 'org.springframework.cloud:spring-cloud-starter-config'
+//	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+//	implementation 'org.springframework.cloud:spring-cloud-starter-config'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -53,13 +53,13 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
 
 	// kafka
-	implementation 'org.springframework.kafka:spring-kafka'
-	testImplementation 'org.springframework.kafka:spring-kafka-test'
-	implementation 'org.springframework.cloud:spring-cloud-starter-bus-kafka'
-	implementation 'com.github.danielwegener:logback-kafka-appender:0.1.0'
+//	implementation 'org.springframework.kafka:spring-kafka'
+//	testImplementation 'org.springframework.kafka:spring-kafka-test'
+//	implementation 'org.springframework.cloud:spring-cloud-starter-bus-kafka'
+//	implementation 'com.github.danielwegener:logback-kafka-appender:0.1.0'
 
 	// Logstash
-	implementation 'net.logstash.logback:logstash-logback-encoder:6.2'
+//	implementation 'net.logstash.logback:logstash-logback-encoder:6.2'
 }
 
 tasks.named('bootBuildImage') {

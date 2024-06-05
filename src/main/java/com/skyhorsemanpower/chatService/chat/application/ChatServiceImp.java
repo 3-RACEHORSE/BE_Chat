@@ -12,17 +12,17 @@ import com.skyhorsemanpower.chatService.chat.data.vo.MemberInfoResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
+import com.skyhorsemanpower.chatService.chat.domain.ChatRoomMember;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.ServerPathEnum;
+import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +55,6 @@ public class ChatServiceImp implements ChatService {
     private final RedisTemplate<String, String> redisTemplate;
     private final MongoTemplate mongoTemplate;
 
-    @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
         if (chatMemberDtos.size() < 2) {
             throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
@@ -63,14 +62,20 @@ public class ChatServiceImp implements ChatService {
 
         try {
             String roomNumber = UUID.randomUUID().toString();
-            Set<String> memberUuids = chatMemberDtos.stream()
-                .map(ChatMemberDto::getMemberUuid)
-                .collect(Collectors.toSet());
-
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
-                .memberUuids(memberUuids)
                 .build();
+
+            chatMemberDtos.forEach(dto -> {
+                MemberInfoResponseVo memberInfoResponseVo = getMemberInfoByWebClientBlocking(dto.getMemberUuid());
+                ChatRoomMember chatRoomMember = ChatRoomMember.builder()
+                    .memberUuid(dto.getMemberUuid())
+                    .memberHandle(memberInfoResponseVo.getHandle())
+                    .memberProfileImage(memberInfoResponseVo.getProfileImage())
+                    .chatRoom(chatRoom)
+                    .build();
+                chatRoom.addChatRoomMember(chatRoomMember);
+            });
 
             chatRoomRepository.save(chatRoom);
         } catch (Exception e) {
@@ -80,19 +85,19 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void sendChat(ChatVo chatVo) {
-        verifyChatRoomAndMemberExistence(chatVo);
+//        verifyChatRoomAndMemberExistence(chatVo);
 
         boolean isRead = checkReadStatus(chatVo);
         saveChatMessage(chatVo, isRead);
     }
 
-    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
-        boolean isMemberInChatRoom = chatRoomRepository.findByMemberUuidsContainingAndRoomNumber(
-            chatVo.getSenderUuid(), chatVo.getRoomNumber()).isPresent();
-        if (!isMemberInChatRoom) {
-            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-        }
-    }
+//    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
+//        boolean isMemberInChatRoom = chatRoomRepository.findByMemberUuidContainingAndRoomNumber(
+//            chatVo.getSenderUuid(), chatVo.getRoomNumber()).isPresent();
+//        if (!isMemberInChatRoom) {
+//            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+//        }
+//    }
 
     private boolean checkReadStatus(ChatVo chatVo) {
         String otherUuid = findOtherMemberUuid(chatVo.getSenderUuid(), chatVo.getRoomNumber());
@@ -127,37 +132,32 @@ public class ChatServiceImp implements ChatService {
 //            .doOnError(error -> log.error("Chat stream for room {} encountered error: {}", roomNumber, error.getMessage()))
 //            .doFinally(signalType -> log.info("Chat stream for room {} completed with signal: {}", roomNumber, signalType));
     }
-    @Override
-    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
-        return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
-            .flatMapMany(Flux::fromIterable)
-            .sort(Comparator.comparing(
-                ChatRoom::getLastChatTime,
-                Comparator.nullsLast(Comparator.reverseOrder())
-            ))
-            .map(chatRoom -> {
-                String otherUserUuid = chatRoom.getMemberUuids().stream()
-                    .filter(uuid -> !uuid.equals(userUuid))
-                    .findFirst()
-                    .orElse(null);
-                return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
-            }).onErrorResume(e -> Flux.empty());
-        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
-    }
+//    @Override
+//    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
+//        return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
+//            .flatMapMany(Flux::fromIterable)
+////            .sort(Comparator.comparing(
+////                ChatRoom::getLastChatTime,
+////                Comparator.nullsLast(Comparator.reverseOrder())
+////            ))
+//            .map(chatRoom -> {
+//                String otherUserUuid = chatRoom.getMemberUuids().stream()
+//                    .filter(uuid -> !uuid.equals(userUuid))
+//                    .findFirst()
+//                    .orElse(null);
+//                return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
+//            }).onErrorResume(e -> Flux.empty());
+//        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
+//    }
 
     @Override
     public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findByRoomNumber(roomNumber);
-        if (chatRoomOpt.isPresent()) {
-            Page<PreviousChatDto> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
-            int currentPage = page;
-            boolean hasNext = previousChat.hasNext();
-            return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
-            // Todo 현재는 senderUuid로 반환하지만 member의 프로필 사진과 핸들 반환하게 수정
-        } else {
-            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-        }
+        Page<PreviousChatDto> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
+        int currentPage = page;
+        boolean hasNext = previousChat.hasNext();
+        return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
+        // Todo 현재는 senderUuid로 반환하지만 member의 프로필 사진과 핸들 반환하게 수정
     }
 
     @Override
@@ -187,21 +187,22 @@ public class ChatServiceImp implements ChatService {
     @Override
     public String findOtherMemberUuid(String uuid, String roomNumber) {
         log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
-        Optional<ChatRoom> chatRoomOptional = chatRoomRepository.findByRoomNumber(roomNumber);
-        if (chatRoomOptional.isPresent()) {
-            ChatRoom chatRoom = chatRoomOptional.get();
-            if (!chatRoom.getMemberUuids().contains(uuid)) {
-                log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
-                throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-            }
-            for (String memberUuid : chatRoom.getMemberUuids()) {
-                if (!memberUuid.equals(uuid)) {
-                    log.info("다른 멤버 UUID 찾음: {}", memberUuid);
-                    return memberUuid;
-                }
-            }
+
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllByRoomNumber(roomNumber);
+
+        if (chatRooms.isEmpty()) {
+            log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
-        log.error("올바르지 않은 채팅방 또는 멤버입니다. roomNumber={}, uuid={}", roomNumber, uuid);
+
+//        for (ChatRoom chatRoom : chatRooms) {
+//            if (!chatRoom.getMemberUuid().equals(uuid)) {
+//                log.info("다른 멤버 UUID 찾음: {}", chatRoom.getMemberUuid());
+//                return chatRoom.getMemberUuid();
+//            }
+//        }
+
+        log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
         throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
     }
 

@@ -11,8 +11,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
-    Optional<ChatRoom> findByRoomNumber(String roomNumber);
-    List<ChatRoom> findByMemberUuidsContaining(String memberUuid);
-    Optional<ChatRoom> findByMemberUuidsContainingAndRoomNumber(String memberUuid,String roomNumber);
+    List<ChatRoom> findAllByRoomNumber(String roomNumber);
+//    List<ChatRoom> findByMemberUuidsContaining(String memberUuid);
+//    Optional<ChatRoom> findByMemberUuidContainingAndRoomNumber(String memberUuid,String roomNumber);
     List<ChatRoom> findAll();
 }
