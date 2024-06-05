@@ -17,14 +17,14 @@ public class ChatRoomListDto {
     private LocalDateTime lastChatTime;
     private Set<String> memberUuids;
 
-    public static ChatRoomListDto fromEntity(ChatRoom chatRoom) {
-        return ChatRoomListDto.builder()
-            .id(chatRoom.getId())
-            .roomNumber(chatRoom.getRoomNumber())
-            .lastChat(chatRoom.getLastChat())
-            .lastChatTime(chatRoom.getLastChatTime())
-            .memberUuids(chatRoom.getMemberUuids()) // 상대방 프로필을 띄우려고 일단 uuid 다 들고 옴
-            .build();
-    }
+//    public static ChatRoomListDto fromEntity(ChatRoom chatRoom) {
+//        return ChatRoomListDto.builder()
+//            .id(chatRoom.getId())
+//            .roomNumber(chatRoom.getRoomNumber())
+//            .lastChat(chatRoom.getLastChat())
+//            .lastChatTime(chatRoom.getLastChatTime())
+//            .memberUuids(chatRoom.getMemberUuids()) // 상대방 프로필을 띄우려고 일단 uuid 다 들고 옴
+//            .build();
+//    }
 
 }

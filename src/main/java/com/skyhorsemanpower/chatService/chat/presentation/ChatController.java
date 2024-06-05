@@ -2,14 +2,13 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
-import com.skyhorsemanpower.chatService.common.ChatWebSocketHandler;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +36,6 @@ import reactor.core.publisher.Sinks;
 @Slf4j
 public class ChatController {
     private final ChatService chatService;
-    private final ChatWebSocketHandler webSocketHandler;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
 
     @PostMapping("/room")
@@ -66,12 +64,12 @@ public class ChatController {
 //        return new SuccessResponse<>(chatVo);
 //    }
 
-    @GetMapping("/chatRooms")
-    @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
-    public Flux<ChatRoomListElementDto> getChatRooms(@RequestHeader String uuid) {
-        webSocketHandler.sendChatRoomsUpdate(uuid);
-        return chatService.getChatRoomsByUserUuid(uuid);
-    }
+//    @GetMapping("/chatRooms")
+//    @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
+//    public Flux<ChatRoomListElementDto> getChatRooms(@RequestHeader String uuid) {
+//        webSocketHandler.sendChatRoomsUpdate(uuid);
+//        return chatService.getChatRoomsByUserUuid(uuid);
+//    }
 
     @GetMapping(value = "/previous/{roomNumber}")
     @Operation(summary = "채팅방 이전 메시지 조회", description = "채팅방에서 이전 메시지를 조회")
@@ -87,7 +85,7 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "채팅방 메시지 조회", description = "채팅방에서 전체 메시지를 조회")
-    public Flux<ChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
+    public Flux<GetChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         log.info("getChat 실행: roomNumber={}, uuid={}", roomNumber, uuid);
         return chatService.getChat(roomNumber, uuid);
