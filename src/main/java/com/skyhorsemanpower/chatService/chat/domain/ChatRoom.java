@@ -26,14 +26,12 @@ public class ChatRoom extends CommonCreateTime {
     private Set<ChatRoomMember> chatRoomMembers = new HashSet<>();
     private String roomNumber;
 
-
     @Builder
     public ChatRoom(Set<ChatRoomMember> chatRoomMembers, String roomNumber) {
         this.chatRoomMembers = chatRoomMembers;
         this.roomNumber = roomNumber;
     }
     public void addChatRoomMember(ChatRoomMember member) {
-        chatRoomMembers.add(member);
-        member.setChatRoom(this);
+        this.chatRoomMembers.add(member);
     }
 }

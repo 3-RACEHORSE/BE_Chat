@@ -14,6 +14,7 @@ import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoomMember;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
+import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomMemberRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
@@ -49,36 +50,46 @@ import reactor.core.publisher.Sinks;
 public class ChatServiceImp implements ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatSyncRepository chatSyncRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
     private final MongoTemplate mongoTemplate;
 
+    @Transactional
+    @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
+
         if (chatMemberDtos.size() < 2) {
             throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
         }
 
         try {
             String roomNumber = UUID.randomUUID().toString();
+            
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
                 .build();
 
+            chatRoomRepository.save(chatRoom);
+            log.info("ChatRoom 저장완료: {}", roomNumber);
+
             chatMemberDtos.forEach(dto -> {
                 MemberInfoResponseVo memberInfoResponseVo = getMemberInfoByWebClientBlocking(dto.getMemberUuid());
+                log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
+
                 ChatRoomMember chatRoomMember = ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
                     .memberHandle(memberInfoResponseVo.getHandle())
                     .memberProfileImage(memberInfoResponseVo.getProfileImage())
                     .chatRoom(chatRoom)
                     .build();
-                chatRoom.addChatRoomMember(chatRoomMember);
+                chatRoomMemberRepository.save(chatRoomMember);
+                log.info("chatRoomMember 저장완료: {}", chatRoomMember);
             });
 
-            chatRoomRepository.save(chatRoom);
         } catch (Exception e) {
+            log.error("채팅 방 생성중 오류 발생: {}", e.getMessage());
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }
     }
