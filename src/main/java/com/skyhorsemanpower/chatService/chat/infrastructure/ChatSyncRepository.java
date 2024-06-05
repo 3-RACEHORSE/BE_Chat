@@ -15,9 +15,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ChatSyncRepository extends MongoRepository<Chat, String> {
-    @Query(value = "{ 'roomNumber' : ?0, 'createdAt' : { $lt: ?1 } }", fields = "{ 'roomNumber': 0 }")
     Page<PreviousChatDto> findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(String roomNumber, LocalDateTime enterTime, Pageable pageable);
     List<Chat> findAllByRoomNumberAndSenderUuidAndReadCount(String roomNumber, String senderUuid, int readCount);
-
     Optional<Chat> findFirstByRoomNumberOrderByCreatedAtDesc(String roomNumber);
 }
