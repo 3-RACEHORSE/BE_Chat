@@ -5,6 +5,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
@@ -84,7 +85,7 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "채팅방 메시지 조회", description = "채팅방에서 전체 메시지를 조회")
-    public Flux<ChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
+    public Flux<GetChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         log.info("getChat 실행: roomNumber={}, uuid={}", roomNumber, uuid);
         return chatService.getChat(roomNumber, uuid);

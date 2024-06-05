@@ -2,13 +2,13 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.MemberInfoResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.dto.MemberInfoResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -25,7 +25,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,7 +36,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -75,13 +73,13 @@ public class ChatServiceImp implements ChatService {
             log.info("ChatRoom 저장완료: {}", roomNumber);
 
             chatMemberDtos.forEach(dto -> {
-                MemberInfoResponseVo memberInfoResponseVo = getMemberInfoByWebClientBlocking(dto.getMemberUuid());
+                MemberInfoResponseDto memberInfoResponseDto = getMemberInfoByWebClientBlocking(dto.getMemberUuid());
                 log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
 
                 ChatRoomMember chatRoomMember = ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
-                    .memberHandle(memberInfoResponseVo.getHandle())
-                    .memberProfileImage(memberInfoResponseVo.getProfileImage())
+                    .memberHandle(memberInfoResponseDto.getHandle())
+                    .memberProfileImage(memberInfoResponseDto.getProfileImage())
                     .chatRoom(chatRoom)
                     .build();
                 chatRoomMemberRepository.save(chatRoomMember);
@@ -96,19 +94,19 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void sendChat(ChatVo chatVo) {
-//        verifyChatRoomAndMemberExistence(chatVo);
+        verifyChatRoomAndMemberExistence(chatVo);
 
         boolean isRead = checkReadStatus(chatVo);
         saveChatMessage(chatVo, isRead);
     }
 
-//    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
-//        boolean isMemberInChatRoom = chatRoomRepository.findByMemberUuidContainingAndRoomNumber(
-//            chatVo.getSenderUuid(), chatVo.getRoomNumber()).isPresent();
-//        if (!isMemberInChatRoom) {
-//            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-//        }
-//    }
+    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
+        boolean isMemberInChatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
+            chatVo.getRoomNumber(), chatVo.getSenderUuid()).isPresent();
+        if (!isMemberInChatRoom) {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+        }
+    }
 
     private boolean checkReadStatus(ChatVo chatVo) {
         String otherUuid = findOtherMemberUuid(chatVo.getSenderUuid(), chatVo.getRoomNumber());
@@ -130,18 +128,26 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public Flux<ChatVo> getChat(String roomNumber, String uuid) {
+    public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
         changeReadCount(roomNumber, uuid);
         LocalDateTime now = LocalDateTime.now();
-        return chatRepository.findChatByRoomNumberAndCreatedAtOrAfter(roomNumber, now);
 
-//        return sink.asFlux()
-//            .filter(chat -> chat.getRoomNumber().equals(roomNumber))
-//            .subscribeOn(Schedulers.boundedElastic())
-//            .doOnTerminate(() -> log.info("Chat stream for room {} terminated.", roomNumber))
-//            .doOnError(error -> log.error("Chat stream for room {} encountered error: {}", roomNumber, error.getMessage()))
-//            .doFinally(signalType -> log.info("Chat stream for room {} completed with signal: {}", roomNumber, signalType));
+        Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuid(uuid);
+        String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
+        String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
+
+        return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(roomNumber, now)
+            .flatMap(chatVo -> {
+                GetChatVo getChatVo = GetChatVo.builder()
+                    .handle(handle)
+                    .profileImage(profileImage)
+                    .content(chatVo.getContent())
+                    .createdAt(chatVo.getCreatedAt())
+                    .readCount(chatVo.getReadCount())
+                    .build();
+                return Mono.just(getChatVo);
+            });
     }
 //    @Override
 //    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
@@ -199,19 +205,19 @@ public class ChatServiceImp implements ChatService {
     public String findOtherMemberUuid(String uuid, String roomNumber) {
         log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
 
-        List<ChatRoom> chatRooms = chatRoomRepository.findAllByRoomNumber(roomNumber);
+        Optional<ChatRoom> chatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
 
-        if (chatRooms.isEmpty()) {
+        if (chatRoom.isEmpty()) {
             log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
 
-//        for (ChatRoom chatRoom : chatRooms) {
-//            if (!chatRoom.getMemberUuid().equals(uuid)) {
-//                log.info("다른 멤버 UUID 찾음: {}", chatRoom.getMemberUuid());
-//                return chatRoom.getMemberUuid();
-//            }
-//        }
+        for (ChatRoomMember member : chatRoom.get().getChatRoomMembers()) {
+            if (!member.getMemberUuid().equals(uuid)) {
+                log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
+                return member.getMemberUuid();
+            }
+        }
 
         log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
         throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
@@ -284,13 +290,13 @@ public class ChatServiceImp implements ChatService {
         }
     }
     // webClient-blocking 통신으로 회원 서비스에 uuid를 이용해 handle과 프로필 이미지 데이터 요청
-    private MemberInfoResponseVo getMemberInfoByWebClientBlocking(String uuid) {
+    private MemberInfoResponseDto getMemberInfoByWebClientBlocking(String uuid) {
         WebClient webClient = WebClient.create(ServerPathEnum.MEMBER_SERVER.getServer());
 
-        ResponseEntity<MemberInfoResponseVo> responseEntity = webClient.get()
+        ResponseEntity<MemberInfoResponseDto> responseEntity = webClient.get()
             .uri(uriBuilder -> uriBuilder.path(ServerPathEnum.GET_MEMBER_INFO.getServer() + "/{uuid}")
                 .build(uuid))
-            .retrieve().toEntity(MemberInfoResponseVo.class).block();
+            .retrieve().toEntity(MemberInfoResponseDto.class).block();
         return responseEntity.getBody();
     }
 }
