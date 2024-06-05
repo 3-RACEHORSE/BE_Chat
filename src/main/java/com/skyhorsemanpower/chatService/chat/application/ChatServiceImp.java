@@ -169,7 +169,8 @@ public class ChatServiceImp implements ChatService {
             Optional<Chat> chat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(chatRoom.getRoomNumber());
 
             String otherUuid = findOtherMemberUuid(uuid, chatRoom.getRoomNumber());
-            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuid(otherUuid);
+            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(otherUuid,
+                chatRoom.getId());
             if(chatRoomMember.isPresent()) {
                 String handle = chatRoomMember.get().getMemberHandle();
                 String profileImage = chatRoomMember.get().getMemberProfileImage();
@@ -204,28 +205,36 @@ public class ChatServiceImp implements ChatService {
         if(previousChat.getSize() == 0){
             throw new CustomException(ResponseStatus.NO_DATA);
         }
+        Optional<ChatRoom> optChatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
+        if (optChatRoom.isPresent()) {
+            // 꺼내서 uuid로 handle과 profileImage넣기
+            try {
+                List<PreviousChatWithMemberInfoDto> previousChatWithMemberInfoDtos = previousChat.getContent()
+                    .stream().map(chatDto -> {
+                        Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(
+                            chatDto.getSenderUuid(), optChatRoom.get()
+                                .getId());
+                        String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
+                        String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage)
+                            .orElse(null);
 
-        // 꺼내서 uuid로 handle과 profileImage넣기
-        try {
-            List<PreviousChatWithMemberInfoDto> previousChatWithMemberInfoDtos = previousChat.getContent().stream().map(chatDto -> {
-                Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuid(chatDto.getSenderUuid());
-                String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
-                String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
+                        return PreviousChatWithMemberInfoDto.builder()
+                            .handle(handle)
+                            .profileImage(profileImage)
+                            .content(chatDto.getContent())
+                            .createdAt(chatDto.getCreatedAt())
+                            .readCount(chatDto.getReadCount())
+                            .build();
+                    }).collect(Collectors.toList());
 
-                return PreviousChatWithMemberInfoDto.builder()
-                    .handle(handle)
-                    .profileImage(profileImage)
-                    .content(chatDto.getContent())
-                    .createdAt(chatDto.getCreatedAt())
-                    .readCount(chatDto.getReadCount())
-                    .build();
-            }).collect(Collectors.toList());
-
-            boolean hasNext = previousChat.hasNext();
-            return new PreviousChatResponseVo(previousChatWithMemberInfoDtos, page, hasNext);
-        } catch (Exception e) {
-            log.error("오류 발생 : {}", e.getMessage());
-            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+                boolean hasNext = previousChat.hasNext();
+                return new PreviousChatResponseVo(previousChatWithMemberInfoDtos, page, hasNext);
+            } catch (Exception e) {
+                log.error("오류 발생 : {}", e.getMessage());
+                throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+            }
+        } else {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
 
