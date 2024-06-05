@@ -127,8 +127,6 @@ public class ChatServiceImp implements ChatService {
             .readCount(readCount)
             .build();
         chatRepository.save(chat).subscribe();
-        chatVo.setCreatedAt(chat.getCreatedAt());
-        chatVo.setReadCount(chat.getReadCount());
     }
 
     @Override
@@ -136,23 +134,30 @@ public class ChatServiceImp implements ChatService {
         enteringMember(uuid, roomNumber);
         changeReadCount(roomNumber, uuid);
         LocalDateTime now = LocalDateTime.now();
+        Optional<ChatRoom> chatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
+        if (chatRoom.isPresent()) {
+            Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(
+                uuid, chatRoom.get().getId());
+            String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
+            String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
 
-        Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuid(uuid);
-        String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
-        String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
-
-        return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(roomNumber, now)
-            .flatMap(chatVo -> {
-                GetChatVo getChatVo = GetChatVo.builder()
-                    .handle(handle)
-                    .profileImage(profileImage)
-                    .content(chatVo.getContent())
-                    .createdAt(chatVo.getCreatedAt())
-                    .readCount(chatVo.getReadCount())
-                    .build();
-                return Mono.just(getChatVo);
-            });
+            return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(
+                    roomNumber, now)
+                .flatMap(chatVo -> {
+                    GetChatVo getChatVo = GetChatVo.builder()
+                        .handle(handle)
+                        .profileImage(profileImage)
+                        .content(chatVo.getContent())
+                        .createdAt(chatVo.getCreatedAt())
+                        .readCount(chatVo.getReadCount())
+                        .build();
+                    return Mono.just(getChatVo);
+                });
+        } else {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+        }
     }
+
     @Override
     public List<ChatRoomListElementDto> getChatRoomsByUuid(String uuid) {
         // uuid로 채팅방 목록 조회
@@ -191,7 +196,6 @@ public class ChatServiceImp implements ChatService {
         return chatRoomList;
     }
 
-    @Transactional
     @Override
     public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
         // 페이징에 담기
