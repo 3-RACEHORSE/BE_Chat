@@ -1,4 +1,4 @@
-package com.skyhorsemanpower.chatService.chat.data.vo;
+package com.skyhorsemanpower.chatService.chat.data.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.skyhorsemanpower.chatService.common.JsonPropertyEnum;
@@ -7,7 +7,7 @@ import lombok.ToString;
 
 @Getter
 @ToString
-public class MemberInfoResponseVo {
+public class MemberInfoResponseDto {
 
     @JsonProperty(value = JsonPropertyEnum.Constant.HANDLE)
     private String handle;
