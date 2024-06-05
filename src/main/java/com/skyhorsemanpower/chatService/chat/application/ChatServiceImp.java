@@ -5,6 +5,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -167,15 +169,40 @@ public class ChatServiceImp implements ChatService {
 //        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
 //    }
 
+    @Transactional
     @Override
     public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
+        // 페이징에 담기
         Pageable pageable = PageRequest.of(page, size);
-        Page<PreviousChatDto> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
-        int currentPage = page;
-        boolean hasNext = previousChat.hasNext();
-        return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
-        // Todo 현재는 senderUuid로 반환하지만 member의 프로필 사진과 핸들 반환하게 수정
+        Page<PreviousChatDto> previousChat = chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
+        if(previousChat.getSize() == 0){
+            throw new CustomException(ResponseStatus.NO_DATA);
+        }
+
+        // 꺼내서 uuid로 handle과 profileImage넣기
+        try {
+            List<PreviousChatWithMemberInfoDto> previousChatWithMemberInfoDtos = previousChat.getContent().stream().map(chatDto -> {
+                Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuid(chatDto.getSenderUuid());
+                String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
+                String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
+
+                return PreviousChatWithMemberInfoDto.builder()
+                    .handle(handle)
+                    .profileImage(profileImage)
+                    .content(chatDto.getContent())
+                    .createdAt(chatDto.getCreatedAt())
+                    .readCount(chatDto.getReadCount())
+                    .build();
+            }).collect(Collectors.toList());
+
+            boolean hasNext = previousChat.hasNext();
+            return new PreviousChatResponseVo(previousChatWithMemberInfoDtos, page, hasNext);
+        } catch (Exception e) {
+            log.error("오류 발생 : {}", e.getMessage());
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
     }
+
 
     @Override
     public void enteringMember(String uuid, String roomNumber) {
