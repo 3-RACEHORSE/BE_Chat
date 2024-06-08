@@ -7,6 +7,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -97,32 +98,38 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public void sendChat(ChatVo chatVo) {
-        verifyChatRoomAndMemberExistence(chatVo);
-
-        boolean isRead = checkReadStatus(chatVo);
-        saveChatMessage(chatVo, isRead);
+    public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // 채팅방의 회원인지 확인
+        verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
+        // 채팅방에 접속중인 회원 확인
+        boolean isRead = checkReadStatus(sendChatRequestDto, uuid);
+        // 채팅 저장
+        saveChatMessage(sendChatRequestDto, isRead, uuid);
     }
 
-    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
+    private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // chatRoom에 조회
         boolean isMemberInChatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
-            chatVo.getRoomNumber(), chatVo.getSenderUuid()).isPresent();
+            sendChatRequestDto.getRoomNumber(), uuid).isPresent();
         if (!isMemberInChatRoom) {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
 
-    private boolean checkReadStatus(ChatVo chatVo) {
-        String otherUuid = findOtherMemberUuid(chatVo.getSenderUuid(), chatVo.getRoomNumber());
-        return isMemberDataExists(otherUuid, chatVo.getRoomNumber());
+    private boolean checkReadStatus(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // 채팅방의 다른 uuid를 찾기
+        String otherUuid = findOtherMemberUuid(uuid, sendChatRequestDto.getRoomNumber());
+        // 다른 회원의 uuid로 현재 채팅방에 접속중인지 확인
+        return isMemberDataExists(otherUuid, sendChatRequestDto.getRoomNumber());
     }
 
-    private void saveChatMessage(ChatVo chatVo, boolean isRead) {
+    private void saveChatMessage(SendChatRequestDto sendChatRequestDto, boolean isRead, String uuid) {
+        // Todo 1:1 채팅을 가정하여 readCount가 0,1이었지만 회원 수가 늘어 변경 필요
         int readCount = isRead ? 0 : 1;
         Chat chat = Chat.builder()
-            .senderUuid(chatVo.getSenderUuid())
-            .content(chatVo.getContent())
-            .roomNumber(chatVo.getRoomNumber())
+            .senderUuid(uuid)
+            .content(sendChatRequestDto.getContent())
+            .roomNumber(sendChatRequestDto.getRoomNumber())
             .createdAt(LocalDateTime.now())
             .readCount(readCount)
             .build();

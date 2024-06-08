@@ -4,12 +4,14 @@ import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,10 +51,10 @@ public class ChatController {
 
     @PostMapping
     @Operation(summary = "채팅 메시지 전송", description = "채팅방 안에서 사용자가 채팅을 보내기")
-    public SuccessResponse<Object> sendChat(@RequestBody ChatVo chatvo,
+    public SuccessResponse<Object> sendChat(@RequestBody SendChatRequestVo sendChatRequestVo,
         @RequestHeader String uuid) {
-        chatvo.setSenderUuid(uuid);
-        chatService.sendChat(chatvo);
+        SendChatRequestDto sendChatRequestDto = sendChatRequestVo.toSendChatRequestDto();
+        chatService.sendChat(sendChatRequestDto, uuid);
         return new SuccessResponse<>(null);
     }
 
