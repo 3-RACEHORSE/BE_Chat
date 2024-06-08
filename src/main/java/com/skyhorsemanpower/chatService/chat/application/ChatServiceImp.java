@@ -99,14 +99,16 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
-
+        // 채팅방의 회원인지 확인
         verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
-
+        // 채팅방에 접속중인 회원 확인
         boolean isRead = checkReadStatus(sendChatRequestDto, uuid);
+        // 채팅 저장
         saveChatMessage(sendChatRequestDto, isRead, uuid);
     }
 
     private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // chatRoom에 조회
         boolean isMemberInChatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
             sendChatRequestDto.getRoomNumber(), uuid).isPresent();
         if (!isMemberInChatRoom) {
@@ -115,11 +117,14 @@ public class ChatServiceImp implements ChatService {
     }
 
     private boolean checkReadStatus(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // 채팅방의 다른 uuid를 찾기
         String otherUuid = findOtherMemberUuid(uuid, sendChatRequestDto.getRoomNumber());
+        // 다른 회원의 uuid로 현재 채팅방에 접속중인지 확인
         return isMemberDataExists(otherUuid, sendChatRequestDto.getRoomNumber());
     }
 
     private void saveChatMessage(SendChatRequestDto sendChatRequestDto, boolean isRead, String uuid) {
+        // Todo 1:1 채팅을 가정하여 readCount가 0,1이었지만 회원 수가 늘어 변경 필요
         int readCount = isRead ? 0 : 1;
         Chat chat = Chat.builder()
             .senderUuid(uuid)
