@@ -2,9 +2,12 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -22,9 +25,11 @@ import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import com.skyhorsemanpower.chatService.common.ServerPathEnum;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -93,38 +98,42 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public void sendChat(ChatVo chatVo) {
-        verifyChatRoomAndMemberExistence(chatVo);
-
-        boolean isRead = checkReadStatus(chatVo);
-        saveChatMessage(chatVo, isRead);
+    public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // 채팅방의 회원인지 확인
+        verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
+        // 채팅방에 접속중인 회원 확인
+        boolean isRead = checkReadStatus(sendChatRequestDto, uuid);
+        // 채팅 저장
+        saveChatMessage(sendChatRequestDto, isRead, uuid);
     }
 
-    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
+    private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // chatRoom에 조회
         boolean isMemberInChatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
-            chatVo.getRoomNumber(), chatVo.getSenderUuid()).isPresent();
+            sendChatRequestDto.getRoomNumber(), uuid).isPresent();
         if (!isMemberInChatRoom) {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
 
-    private boolean checkReadStatus(ChatVo chatVo) {
-        String otherUuid = findOtherMemberUuid(chatVo.getSenderUuid(), chatVo.getRoomNumber());
-        return isMemberDataExists(otherUuid, chatVo.getRoomNumber());
+    private boolean checkReadStatus(SendChatRequestDto sendChatRequestDto, String uuid) {
+        // 채팅방의 다른 uuid를 찾기
+        String otherUuid = findOtherMemberUuid(uuid, sendChatRequestDto.getRoomNumber());
+        // 다른 회원의 uuid로 현재 채팅방에 접속중인지 확인
+        return isMemberDataExists(otherUuid, sendChatRequestDto.getRoomNumber());
     }
 
-    private void saveChatMessage(ChatVo chatVo, boolean isRead) {
+    private void saveChatMessage(SendChatRequestDto sendChatRequestDto, boolean isRead, String uuid) {
+        // Todo 1:1 채팅을 가정하여 readCount가 0,1이었지만 회원 수가 늘어 변경 필요
         int readCount = isRead ? 0 : 1;
         Chat chat = Chat.builder()
-            .senderUuid(chatVo.getSenderUuid())
-            .content(chatVo.getContent())
-            .roomNumber(chatVo.getRoomNumber())
+            .senderUuid(uuid)
+            .content(sendChatRequestDto.getContent())
+            .roomNumber(sendChatRequestDto.getRoomNumber())
             .createdAt(LocalDateTime.now())
             .readCount(readCount)
             .build();
         chatRepository.save(chat).subscribe();
-        chatVo.setCreatedAt(chat.getCreatedAt());
-        chatVo.setReadCount(chat.getReadCount());
     }
 
     @Override
@@ -132,50 +141,110 @@ public class ChatServiceImp implements ChatService {
         enteringMember(uuid, roomNumber);
         changeReadCount(roomNumber, uuid);
         LocalDateTime now = LocalDateTime.now();
+        Optional<ChatRoom> chatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
+        if (chatRoom.isPresent()) {
+            Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(
+                uuid, chatRoom.get().getId());
+            String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
+            String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
 
-        Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuid(uuid);
-        String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
-        String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
-
-        return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(roomNumber, now)
-            .flatMap(chatVo -> {
-                GetChatVo getChatVo = GetChatVo.builder()
-                    .handle(handle)
-                    .profileImage(profileImage)
-                    .content(chatVo.getContent())
-                    .createdAt(chatVo.getCreatedAt())
-                    .readCount(chatVo.getReadCount())
-                    .build();
-                return Mono.just(getChatVo);
-            });
+            return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(
+                    roomNumber, now)
+                .flatMap(chatVo -> {
+                    GetChatVo getChatVo = GetChatVo.builder()
+                        .handle(handle)
+                        .profileImage(profileImage)
+                        .content(chatVo.getContent())
+                        .createdAt(chatVo.getCreatedAt())
+                        .readCount(chatVo.getReadCount())
+                        .build();
+                    return Mono.just(getChatVo);
+                });
+        } else {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+        }
     }
-//    @Override
-//    public Flux<ChatRoomListElementDto> getChatRoomsByUserUuid(String userUuid) {
-//        return Mono.fromCallable(() -> chatRoomRepository.findByMemberUuidsContaining(userUuid))
-//            .flatMapMany(Flux::fromIterable)
-////            .sort(Comparator.comparing(
-////                ChatRoom::getLastChatTime,
-////                Comparator.nullsLast(Comparator.reverseOrder())
-////            ))
-//            .map(chatRoom -> {
-//                String otherUserUuid = chatRoom.getMemberUuids().stream()
-//                    .filter(uuid -> !uuid.equals(userUuid))
-//                    .findFirst()
-//                    .orElse(null);
-//                return ChatRoomListElementDto.fromEntityAndOtherUserUuid(chatRoom, otherUserUuid);
-//            }).onErrorResume(e -> Flux.empty());
-//        // 이거는 Flux라 CustomException 처리가 안됩니다 이렇게 빈 Flux로 반환해야하는듯
-//    }
+
+    @Override
+    public List<ChatRoomListElementDto> getChatRoomsByUuid(String uuid) {
+        // uuid로 채팅방 목록 조회
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllByChatRoomMembers_MemberUuid(uuid);
+
+        List<ChatRoomListElementDto> chatRoomList = new ArrayList<>();
+        for (ChatRoom chatRoom : chatRooms) {
+            // 각 채팅방 별 마지막 메시지
+            Optional<Chat> chat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(chatRoom.getRoomNumber());
+
+            String otherUuid = findOtherMemberUuid(uuid, chatRoom.getRoomNumber());
+            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(otherUuid,
+                chatRoom.getId());
+            if(chatRoomMember.isPresent()) {
+                String handle = chatRoomMember.get().getMemberHandle();
+                String profileImage = chatRoomMember.get().getMemberProfileImage();
+                // 마지막 채팅이 있는 것과 없는 것 구분해서 넣기
+                ChatRoomListElementDto chatRoomElement = chat.map(ch -> ChatRoomListElementDto.builder()
+                        .roomNumber(chatRoom.getRoomNumber())
+                        .lastChat(ch.getContent())
+                        .lastChatTime(ch.getCreatedAt())
+                        .memberUuid(otherUuid)
+                        .handle(handle)
+                        .profileImage(profileImage)
+                        .build())
+                    .orElseGet(() -> ChatRoomListElementDto.builder()
+                        .roomNumber(chatRoom.getRoomNumber())
+                        .lastChat(null)
+                        .lastChatTime(null)
+                        .memberUuid(otherUuid)
+                        .handle(handle)
+                        .profileImage(profileImage)
+                        .build());
+                chatRoomList.add(chatRoomElement);
+            }
+        }
+        return chatRoomList;
+    }
 
     @Override
     public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
+        // 페이징에 담기
         Pageable pageable = PageRequest.of(page, size);
-        Page<PreviousChatDto> previousChat= chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
-        int currentPage = page;
-        boolean hasNext = previousChat.hasNext();
-        return new PreviousChatResponseVo(previousChat.getContent(), currentPage, hasNext);
-        // Todo 현재는 senderUuid로 반환하지만 member의 프로필 사진과 핸들 반환하게 수정
+        Page<PreviousChatDto> previousChat = chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
+        if(previousChat.getSize() == 0){
+            throw new CustomException(ResponseStatus.NO_DATA);
+        }
+        Optional<ChatRoom> optChatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
+        if (optChatRoom.isPresent()) {
+            // 꺼내서 uuid로 handle과 profileImage넣기
+            try {
+                List<PreviousChatWithMemberInfoDto> previousChatWithMemberInfoDtos = previousChat.getContent()
+                    .stream().map(chatDto -> {
+                        Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(
+                            chatDto.getSenderUuid(), optChatRoom.get()
+                                .getId());
+                        String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
+                        String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage)
+                            .orElse(null);
+
+                        return PreviousChatWithMemberInfoDto.builder()
+                            .handle(handle)
+                            .profileImage(profileImage)
+                            .content(chatDto.getContent())
+                            .createdAt(chatDto.getCreatedAt())
+                            .readCount(chatDto.getReadCount())
+                            .build();
+                    }).collect(Collectors.toList());
+
+                boolean hasNext = previousChat.hasNext();
+                return new PreviousChatResponseVo(previousChatWithMemberInfoDtos, page, hasNext);
+            } catch (Exception e) {
+                log.error("오류 발생 : {}", e.getMessage());
+                throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+            }
+        } else {
+            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+        }
     }
+
 
     @Override
     public void enteringMember(String uuid, String roomNumber) {
