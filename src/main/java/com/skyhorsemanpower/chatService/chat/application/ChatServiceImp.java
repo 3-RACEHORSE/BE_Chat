@@ -7,6 +7,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -97,32 +98,33 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public void sendChat(ChatVo chatVo) {
-        verifyChatRoomAndMemberExistence(chatVo);
+    public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
 
-        boolean isRead = checkReadStatus(chatVo);
-        saveChatMessage(chatVo, isRead);
+        verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
+
+        boolean isRead = checkReadStatus(sendChatRequestDto, uuid);
+        saveChatMessage(sendChatRequestDto, isRead, uuid);
     }
 
-    private void verifyChatRoomAndMemberExistence(ChatVo chatVo) {
+    private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
         boolean isMemberInChatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
-            chatVo.getRoomNumber(), chatVo.getSenderUuid()).isPresent();
+            sendChatRequestDto.getRoomNumber(), uuid).isPresent();
         if (!isMemberInChatRoom) {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
 
-    private boolean checkReadStatus(ChatVo chatVo) {
-        String otherUuid = findOtherMemberUuid(chatVo.getSenderUuid(), chatVo.getRoomNumber());
-        return isMemberDataExists(otherUuid, chatVo.getRoomNumber());
+    private boolean checkReadStatus(SendChatRequestDto sendChatRequestDto, String uuid) {
+        String otherUuid = findOtherMemberUuid(uuid, sendChatRequestDto.getRoomNumber());
+        return isMemberDataExists(otherUuid, sendChatRequestDto.getRoomNumber());
     }
 
-    private void saveChatMessage(ChatVo chatVo, boolean isRead) {
+    private void saveChatMessage(SendChatRequestDto sendChatRequestDto, boolean isRead, String uuid) {
         int readCount = isRead ? 0 : 1;
         Chat chat = Chat.builder()
-            .senderUuid(chatVo.getSenderUuid())
-            .content(chatVo.getContent())
-            .roomNumber(chatVo.getRoomNumber())
+            .senderUuid(uuid)
+            .content(sendChatRequestDto.getContent())
+            .roomNumber(sendChatRequestDto.getRoomNumber())
             .createdAt(LocalDateTime.now())
             .readCount(readCount)
             .build();
