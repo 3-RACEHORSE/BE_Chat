@@ -11,7 +11,6 @@ import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
-import com.skyhorsemanpower.chatService.chat.data.dto.MemberInfoResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.domain.Chat;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
@@ -20,9 +19,9 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomMemberRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
+import com.skyhorsemanpower.chatService.common.RandomHandleGenerator;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
-import com.skyhorsemanpower.chatService.common.ServerPathEnum;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,9 +39,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -69,21 +66,23 @@ public class ChatServiceImp implements ChatService {
 
         try {
             String roomNumber = UUID.randomUUID().toString();
-            
+
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
                 .build();
-
             chatRoomRepository.save(chatRoom);
             log.info("ChatRoom 저장완료: {}", roomNumber);
 
             chatMemberDtos.forEach(dto -> {
                 log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
-
+                // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
+                String handle = RandomHandleGenerator.generateRandomWord();
+                String profile = RandomHandleGenerator.randomProfile();
                 ChatRoomMember chatRoomMember = ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
-                    .memberHandle(dto.getMemberUuid())
-                    .memberProfileImage("https://ifh.cc/g/Vv1lrR.png")
+                    .memberHandle(handle)
+                    // 랜덤 프로필 생성 이미지
+                    .memberProfileImage(profile)
                     .chatRoom(chatRoom)
                     .build();
                 chatRoomMemberRepository.save(chatRoomMember);
