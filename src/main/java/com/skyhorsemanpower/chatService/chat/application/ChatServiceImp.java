@@ -77,11 +77,12 @@ public class ChatServiceImp implements ChatService {
                 log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
+                String profile = RandomHandleGenerator.randomProfile();
                 ChatRoomMember chatRoomMember = ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
                     .memberHandle(handle)
-                    // 랜덤 프로필 생성 이미지 활용(SVG)
-                    .memberProfileImage("https://source.boringavatars.com/beam/1000/"+handle)
+                    // 랜덤 프로필 생성 이미지
+                    .memberProfileImage(profile)
                     .chatRoom(chatRoom)
                     .build();
                 chatRoomMemberRepository.save(chatRoomMember);

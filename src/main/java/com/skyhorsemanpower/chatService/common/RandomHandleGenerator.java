@@ -34,11 +34,20 @@ public class RandomHandleGenerator {
         "도롱뇽", "북극곰", "퓨마", "미어캣", "코요테", "라마", "딱따구리", "기러기", "비둘기", "스컹크",
         "돌고래", "까마귀", "매", "낙타", "여우", "사슴", "늑대", "재규어", "알파카", "양", "다람쥐", "담비"
     };
+    private static final String [] profiles = {
+        "https://ifh.cc/g/a3lcrS.png", "https://ifh.cc/g/qBdrAt.png", "https://ifh.cc/g/dn4wJ3.png",
+        "https://ifh.cc/g/nG8zvd.png"
+    };
 
     public static String generateRandomWord() {
         Random random = new Random();
         String adjective = adjectives[random.nextInt(adjectives.length)];
         String animal = animals[random.nextInt(animals.length)];
         return adjective + " " + animal;
+    }
+
+    public static String randomProfile() {
+        Random random = new Random();
+        return profiles[random.nextInt(profiles.length)];
     }
 }
