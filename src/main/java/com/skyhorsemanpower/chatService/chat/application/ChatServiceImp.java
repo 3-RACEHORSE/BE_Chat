@@ -66,11 +66,10 @@ public class ChatServiceImp implements ChatService {
 
         try {
             String roomNumber = UUID.randomUUID().toString();
-            
+
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
                 .build();
-
             chatRoomRepository.save(chatRoom);
             log.info("ChatRoom 저장완료: {}", roomNumber);
 
