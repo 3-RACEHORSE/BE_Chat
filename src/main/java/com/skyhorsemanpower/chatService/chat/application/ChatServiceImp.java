@@ -78,13 +78,12 @@ public class ChatServiceImp implements ChatService {
             log.info("ChatRoom 저장완료: {}", roomNumber);
 
             chatMemberDtos.forEach(dto -> {
-                MemberInfoResponseDto memberInfoResponseDto = getMemberInfoByWebClientBlocking(dto.getMemberUuid());
                 log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
 
                 ChatRoomMember chatRoomMember = ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
-                    .memberHandle(memberInfoResponseDto.getHandle())
-                    .memberProfileImage(memberInfoResponseDto.getProfileImage())
+                    .memberHandle(dto.getMemberUuid())
+                    .memberProfileImage("https://ifh.cc/g/Vv1lrR.png")
                     .chatRoom(chatRoom)
                     .build();
                 chatRoomMemberRepository.save(chatRoomMember);
@@ -167,6 +166,7 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public List<ChatRoomListElementDto> getChatRoomsByUuid(String uuid) {
+        // Todo 1:1 채팅을 가정해서 상대방의 핸들과 프로필 사진을 띄우게 했는데 이제는 그룹채팅도 있어서 수정이 필요함
         // uuid로 채팅방 목록 조회
         List<ChatRoom> chatRooms = chatRoomRepository.findAllByChatRoomMembers_MemberUuid(uuid);
 
@@ -357,15 +357,5 @@ public class ChatServiceImp implements ChatService {
         } else {
             throw new CustomException(ResponseStatus.NO_DATA);
         }
-    }
-    // webClient-blocking 통신으로 회원 서비스에 uuid를 이용해 handle과 프로필 이미지 데이터 요청
-    private MemberInfoResponseDto getMemberInfoByWebClientBlocking(String uuid) {
-        WebClient webClient = WebClient.create(ServerPathEnum.MEMBER_SERVER.getServer());
-
-        ResponseEntity<MemberInfoResponseDto> responseEntity = webClient.get()
-            .uri(uriBuilder -> uriBuilder.path(ServerPathEnum.GET_MEMBER_INFO.getServer() + "/{uuid}")
-                .build(uuid))
-            .retrieve().toEntity(MemberInfoResponseDto.class).block();
-        return responseEntity.getBody();
     }
 }
