@@ -135,29 +135,27 @@ public class ChatServiceImp implements ChatService {
     public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
         changeReadCount(roomNumber, uuid);
-        LocalDateTime now = LocalDateTime.now();
-        Optional<ChatRoom> chatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
-        if (chatRoom.isPresent()) {
-            Optional<ChatRoomMember> memberOpt = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(
-                uuid, chatRoom.get().getId());
-            String handle = memberOpt.map(ChatRoomMember::getMemberHandle).orElse(null);
-            String profileImage = memberOpt.map(ChatRoomMember::getMemberProfileImage).orElse(null);
 
-            return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(
-                    roomNumber, now)
-                .flatMap(chatVo -> {
-                    GetChatVo getChatVo = GetChatVo.builder()
-                        .handle(handle)
-                        .profileImage(profileImage)
-                        .content(chatVo.getContent())
-                        .createdAt(chatVo.getCreatedAt())
-                        .readCount(chatVo.getReadCount())
-                        .build();
-                    return Mono.just(getChatVo);
+
+        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
+            uuid, roomNumber).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+
+        LocalDateTime now = LocalDateTime.now();
+        String handle = chatRoomMember.getMemberHandle();
+        String profileImage = chatRoomMember.getMemberProfileImage();
+
+        return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(
+                roomNumber, now)
+            .flatMap(chatVo -> {
+                GetChatVo getChatVo = GetChatVo.builder()
+                    .handle(handle)
+                    .profileImage(profileImage)
+                    .content(chatVo.getContent())
+                    .createdAt(chatVo.getCreatedAt())
+                    .readCount(chatVo.getReadCount())
+                    .build();
+                return Mono.just(getChatVo);
                 });
-        } else {
-            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-        }
     }
 
     @Override
@@ -172,8 +170,8 @@ public class ChatServiceImp implements ChatService {
             Optional<Chat> chat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(chatRoom.getRoomNumber());
 
             String otherUuid = findOtherMemberUuid(uuid, chatRoom.getRoomNumber());
-            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndChatRoomId(otherUuid,
-                chatRoom.getId());
+            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(otherUuid,
+                chatRoom.getRoomNumber());
             if(chatRoomMember.isPresent()) {
                 String handle = chatRoomMember.get().getMemberHandle();
                 String profileImage = chatRoomMember.get().getMemberProfileImage();

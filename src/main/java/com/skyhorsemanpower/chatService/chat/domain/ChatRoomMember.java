@@ -11,11 +11,13 @@ public class ChatRoomMember {
     private String memberUuid;
     private String memberHandle;
     private String memberProfileImage;
+    private String roomNumber;
     @Builder
-    public ChatRoomMember(String memberUuid, String memberHandle,
-        String memberProfileImage) {
+    public ChatRoomMember(String memberUuid, String memberHandle, String memberProfileImage,
+        String roomNumber) {
         this.memberUuid = memberUuid;
         this.memberHandle = memberHandle;
         this.memberProfileImage = memberProfileImage;
+        this.roomNumber = roomNumber;
     }
 }
