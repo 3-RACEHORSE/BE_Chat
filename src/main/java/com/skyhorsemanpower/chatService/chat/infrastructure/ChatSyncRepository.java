@@ -13,6 +13,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ChatSyncRepository extends MongoRepository<Chat, String> {
     Page<PreviousChatDto> findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(String roomNumber, LocalDateTime enterTime, Pageable pageable);
-    List<Chat> findAllByRoomNumberAndSenderUuidAndReadCount(String roomNumber, String senderUuid, int readCount);
+//    List<Chat> findAllByRoomNumberAndSenderUuidAndReadCount(String roomNumber, String senderUuid, int readCount);
     Optional<Chat> findFirstByRoomNumberOrderByCreatedAtDesc(String roomNumber);
 }

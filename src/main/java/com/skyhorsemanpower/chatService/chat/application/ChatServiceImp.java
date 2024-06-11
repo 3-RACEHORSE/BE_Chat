@@ -127,8 +127,6 @@ public class ChatServiceImp implements ChatService {
     @Override
     public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
         enteringMember(uuid, roomNumber);
-        changeReadCount(roomNumber, uuid);
-
 
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
             uuid, roomNumber).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
@@ -145,7 +143,6 @@ public class ChatServiceImp implements ChatService {
                     .profileImage(profileImage)
                     .content(chatVo.getContent())
                     .createdAt(chatVo.getCreatedAt())
-                    .readCount(chatVo.getReadCount())
                     .build();
                 return Mono.just(getChatVo);
                 });
@@ -163,31 +160,30 @@ public class ChatServiceImp implements ChatService {
             Optional<Chat> chat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(chatRoom.getRoomNumber());
 
             String otherUuid = findOtherMemberUuid(uuid, chatRoom.getRoomNumber());
-            Optional<ChatRoomMember> chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(otherUuid,
-                chatRoom.getRoomNumber());
-            if(chatRoomMember.isPresent()) {
-                String handle = chatRoomMember.get().getMemberHandle();
-                String profileImage = chatRoomMember.get().getMemberProfileImage();
-                // 마지막 채팅이 있는 것과 없는 것 구분해서 넣기
-                ChatRoomListElementDto chatRoomElement = chat.map(ch -> ChatRoomListElementDto.builder()
-                        .roomNumber(chatRoom.getRoomNumber())
-                        .lastChat(ch.getContent())
-                        .lastChatTime(ch.getCreatedAt())
-                        .memberUuid(otherUuid)
-                        .handle(handle)
-                        .profileImage(profileImage)
-                        .build())
-                    .orElseGet(() -> ChatRoomListElementDto.builder()
-                        .roomNumber(chatRoom.getRoomNumber())
-                        .lastChat(null)
-                        .lastChatTime(null)
-                        .memberUuid(otherUuid)
-                        .handle(handle)
-                        .profileImage(profileImage)
-                        .build());
-                chatRoomList.add(chatRoomElement);
+            ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(otherUuid,
+                chatRoom.getRoomNumber()).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+
+            String handle = chatRoomMember.getMemberHandle();
+            String profileImage = chatRoomMember.getMemberProfileImage();
+            // 마지막 채팅이 있는 것과 없는 것 구분해서 넣기
+            ChatRoomListElementDto chatRoomElement = chat.map(ch -> ChatRoomListElementDto.builder()
+                    .roomNumber(chatRoom.getRoomNumber())
+                    .lastChat(ch.getContent())
+                    .lastChatTime(ch.getCreatedAt())
+                    .memberUuid(otherUuid)
+                    .handle(handle)
+                    .profileImage(profileImage)
+                    .build())
+                .orElseGet(() -> ChatRoomListElementDto.builder()
+                    .roomNumber(chatRoom.getRoomNumber())
+                    .lastChat(null)
+                    .lastChatTime(null)
+                    .memberUuid(otherUuid)
+                    .handle(handle)
+                    .profileImage(profileImage)
+                    .build());
+            chatRoomList.add(chatRoomElement);
             }
-        }
         return chatRoomList;
     }
 
@@ -261,14 +257,14 @@ public class ChatServiceImp implements ChatService {
     public String findOtherMemberUuid(String uuid, String roomNumber) {
         log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
 
-        Optional<ChatRoom> chatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
+        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(roomNumber);
 
-        if (chatRoom.isEmpty()) {
+        if (chatRoomMembers.isEmpty()) {
             log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
 
-        for (ChatRoomMember member : chatRoom.get().getChatRoomMembers()) {
+        for (ChatRoomMember member : chatRoomMembers) {
             if (!member.getMemberUuid().equals(uuid)) {
                 log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
                 return member.getMemberUuid();
@@ -297,35 +293,18 @@ public class ChatServiceImp implements ChatService {
         }
     }
 
-    @Override
-    public int getUnreadChatCount(String roomNumber, String uuid) {
-        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
-        int readCount = 1;
-        try {
-            List<Chat> chats = chatSyncRepository.findAllByRoomNumberAndSenderUuidAndReadCount(
-                roomNumber, otherUuid, readCount);
-            return chats.size();
-        } catch (Exception e) {
-            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
-        }
-    }
-
-    public void changeReadCount(String roomNumber, String uuid) {
-        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
-        Query query = new Query();
-        query.addCriteria(Criteria.where("roomNumber").is(roomNumber)
-            .and("senderUuid").is(otherUuid));
-
-        List<Chat> chats = mongoTemplate.find(query, Chat.class);
-        if (chats.isEmpty()) {
-            return;
-        }
-
-        Update update = new Update();
-        update.set("readCount", 0);
-
-        mongoTemplate.updateMulti(query, update, Chat.class);
-    }
+//    @Override
+//    public int getUnreadChatCount(String roomNumber, String uuid) {
+//        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
+//        int readCount = 1;
+//        try {
+//            List<Chat> chats = chatSyncRepository.findAllByRoomNumberAndSenderUuidAndReadCount(
+//                roomNumber, otherUuid, readCount);
+//            return chats.size();
+//        } catch (Exception e) {
+//            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+//        }
+//    }
 
     @Override
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {

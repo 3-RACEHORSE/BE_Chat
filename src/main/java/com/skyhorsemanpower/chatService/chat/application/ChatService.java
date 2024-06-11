@@ -23,7 +23,7 @@ public interface ChatService {
     void enteringMember(String uuid, String roomNumber);
     String findOtherMemberUuid(String uuid, String roomNumber);
 
-    int getUnreadChatCount(String roomNumber, String uuid);
+//    int getUnreadChatCount(String roomNumber, String uuid);
     void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto);
     LastChatVo getLastChat(String uuid, String roomNumber);
 }
