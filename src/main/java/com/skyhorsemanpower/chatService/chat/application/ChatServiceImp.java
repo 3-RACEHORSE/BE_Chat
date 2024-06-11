@@ -2,12 +2,12 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -64,26 +64,37 @@ public class ChatServiceImp implements ChatService {
 
         try {
             String roomNumber = UUID.randomUUID().toString();
-            ChatRoom chatRoom = ChatRoom.builder()
-                .roomNumber(roomNumber)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-            chatRoomRepository.save(chatRoom);
-            log.info("ChatRoom 저장완료: {}", roomNumber);
 
-            chatMemberDtos.forEach(dto -> {
+            // Create the list of ChatRoomMembers
+            List<ChatRoomMember> chatRoomMembers = chatMemberDtos.stream().map(dto -> {
                 log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
                 String profile = RandomHandleGenerator.randomProfile();
-                ChatRoomMember chatRoomMember = ChatRoomMember.builder()
+                return ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
                     .memberHandle(handle)
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
                     .roomNumber(roomNumber)
                     .build();
+            }).collect(Collectors.toList());
+
+            // Create the ChatRoom instance with chatRoomMembers
+            ChatRoom chatRoom = ChatRoom.builder()
+                .roomNumber(roomNumber)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .chatRoomMembers(chatRoomMembers)
+                .title("*** 공지방")
+                .thumbnail("https://ifh.cc/g/a3lcrS.png")
+                .build();
+
+            chatRoomRepository.save(chatRoom);
+            log.info("ChatRoom 저장완료: {}", roomNumber);
+
+            // Save each chatRoomMember
+            chatRoomMembers.forEach(chatRoomMember -> {
                 chatRoomMemberRepository.save(chatRoomMember);
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
             });
@@ -93,6 +104,7 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }
     }
+
 
     @Override
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
@@ -149,42 +161,25 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public List<ChatRoomListElementDto> getChatRoomsByUuid(String uuid) {
-        // Todo 1:1 채팅을 가정해서 상대방의 핸들과 프로필 사진을 띄우게 했는데 이제는 그룹채팅도 있어서 수정이 필요함
+    public List<ChatRoomResponseVo> getChatRoomsByUuid(String uuid) {
+        log.info("memberUuid로 채팅방 리스트 찾기: {}", uuid);
         // uuid로 채팅방 목록 조회
         List<ChatRoom> chatRooms = chatRoomRepository.findAllByChatRoomMembers_MemberUuid(uuid);
-
-        List<ChatRoomListElementDto> chatRoomList = new ArrayList<>();
-        for (ChatRoom chatRoom : chatRooms) {
-            // 각 채팅방 별 마지막 메시지
-            Optional<Chat> chat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(chatRoom.getRoomNumber());
-
-            String otherUuid = findOtherMemberUuid(uuid, chatRoom.getRoomNumber());
-            ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(otherUuid,
-                chatRoom.getRoomNumber()).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
-
-            String handle = chatRoomMember.getMemberHandle();
-            String profileImage = chatRoomMember.getMemberProfileImage();
-            // 마지막 채팅이 있는 것과 없는 것 구분해서 넣기
-            ChatRoomListElementDto chatRoomElement = chat.map(ch -> ChatRoomListElementDto.builder()
-                    .roomNumber(chatRoom.getRoomNumber())
-                    .lastChat(ch.getContent())
-                    .lastChatTime(ch.getCreatedAt())
-                    .memberUuid(otherUuid)
-                    .handle(handle)
-                    .profileImage(profileImage)
-                    .build())
-                .orElseGet(() -> ChatRoomListElementDto.builder()
-                    .roomNumber(chatRoom.getRoomNumber())
-                    .lastChat(null)
-                    .lastChatTime(null)
-                    .memberUuid(otherUuid)
-                    .handle(handle)
-                    .profileImage(profileImage)
-                    .build());
-            chatRoomList.add(chatRoomElement);
-            }
-        return chatRoomList;
+        if (chatRooms.isEmpty()) {
+            throw new CustomException(ResponseStatus.NO_DATA);
+        }
+        // vo에 담아서 반환
+        List<ChatRoomResponseVo> chatRoomResponseVos = new ArrayList<>();
+        for(ChatRoom chatRoom : chatRooms) {
+            ChatRoomResponseVo chatRoomResponseVo = ChatRoomResponseVo.builder()
+                .roomNumber(chatRoom.getRoomNumber())
+                .title(chatRoom.getTitle())
+                .thumbnail(chatRoom.getThumbnail())
+                .updatedAt(chatRoom.getUpdatedAt())
+                .build();
+            chatRoomResponseVos.add(chatRoomResponseVo);
+        }
+        return chatRoomResponseVos;
     }
 
     @Override

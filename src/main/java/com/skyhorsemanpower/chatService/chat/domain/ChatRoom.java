@@ -17,14 +17,18 @@ public class ChatRoom {
     private String roomNumber;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String title;
+    private String thumbnail;
 
     @Builder
     public ChatRoom(String id, List<ChatRoomMember> chatRoomMembers, String roomNumber,
-        LocalDateTime createdAt, LocalDateTime updatedAt) {
+        LocalDateTime createdAt, LocalDateTime updatedAt, String title, String thumbnail) {
         this.id = id;
         this.chatRoomMembers = chatRoomMembers;
         this.roomNumber = roomNumber;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.title = title;
+        this.thumbnail = thumbnail;
     }
 }
