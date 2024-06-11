@@ -1,34 +1,23 @@
 package com.skyhorsemanpower.chatService.chat.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@NoArgsConstructor
-@Entity
 @Getter
+@Document(collection = "chatRoomMember")
 public class ChatRoomMember {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    @ManyToOne
-    private ChatRoom chatRoom;
     private String memberUuid;
     private String memberHandle;
     private String memberProfileImage;
+    private String roomNumber;
     @Builder
-    public ChatRoomMember(ChatRoom chatRoom, String memberUuid, String memberHandle,
-        String memberProfileImage) {
-        this.chatRoom = chatRoom;
+    public ChatRoomMember(String memberUuid, String memberHandle, String memberProfileImage,
+        String roomNumber) {
         this.memberUuid = memberUuid;
         this.memberHandle = memberHandle;
         this.memberProfileImage = memberProfileImage;
+        this.roomNumber = roomNumber;
     }
 }

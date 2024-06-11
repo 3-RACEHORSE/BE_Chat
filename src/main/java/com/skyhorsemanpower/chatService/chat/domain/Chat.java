@@ -1,6 +1,5 @@
 package com.skyhorsemanpower.chatService.chat.domain;
 
-import com.skyhorsemanpower.chatService.common.CommonCreateTime;
 import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,16 +17,14 @@ public class Chat {
     private String imageUrl;
     private String roomNumber;
     private LocalDateTime createdAt;
-    private int readCount;
 
     @Builder
     public Chat(String senderUuid, String content, String imageUrl, String roomNumber,
-        LocalDateTime createdAt, int readCount) {
+        LocalDateTime createdAt) {
         this.senderUuid = senderUuid;
         this.content = content;
         this.imageUrl = imageUrl;
         this.roomNumber = roomNumber;
         this.createdAt = createdAt;
-        this.readCount = readCount;
     }
 }
