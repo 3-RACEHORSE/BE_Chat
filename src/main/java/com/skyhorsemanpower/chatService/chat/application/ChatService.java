@@ -23,5 +23,5 @@ public interface ChatService {
 
 //    int getUnreadChatCount(String roomNumber, String uuid);
     void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto);
-    LastChatVo getLastChat(String uuid, String roomNumber);
+    LastChatVo getLastChatSync(String uuid, String roomNumber);
 }

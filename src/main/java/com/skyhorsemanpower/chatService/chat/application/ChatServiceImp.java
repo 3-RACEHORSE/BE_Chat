@@ -308,7 +308,7 @@ public class ChatServiceImp implements ChatService {
         log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
     @Override
-    public LastChatVo getLastChat(String uuid, String roomNumber) {
+    public LastChatVo getLastChatSync(String uuid, String roomNumber) {
         Optional<Chat> optionalChat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(roomNumber);
         if (optionalChat.isPresent()) {
             return LastChatVo.builder()
@@ -319,4 +319,6 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.NO_DATA);
         }
     }
+
+
 }
