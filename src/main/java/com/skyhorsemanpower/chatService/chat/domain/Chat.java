@@ -1,6 +1,5 @@
 package com.skyhorsemanpower.chatService.chat.domain;
 
-import com.skyhorsemanpower.chatService.common.CommonCreateTime;
 import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;

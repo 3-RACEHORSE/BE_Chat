@@ -3,8 +3,8 @@ package com.skyhorsemanpower.chatService.chat.infrastructure;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.chat.domain.ChatRoomMember;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, Long> {
+public interface ChatRoomMemberRepository extends MongoRepository<ChatRoomMember, String> {
     Optional<ChatRoomMember> findByMemberUuidAndChatRoomId(String uuid, Long id);
 }

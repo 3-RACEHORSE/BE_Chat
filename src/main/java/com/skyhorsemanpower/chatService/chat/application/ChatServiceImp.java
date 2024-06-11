@@ -22,7 +22,6 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.common.RandomHandleGenerator;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +55,6 @@ public class ChatServiceImp implements ChatService {
     private final RedisTemplate<String, String> redisTemplate;
     private final MongoTemplate mongoTemplate;
 
-    @Transactional
     @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
 
@@ -83,7 +81,6 @@ public class ChatServiceImp implements ChatService {
                     .memberHandle(handle)
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
-                    .chatRoom(chatRoom)
                     .build();
                 chatRoomMemberRepository.save(chatRoomMember);
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
