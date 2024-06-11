@@ -12,14 +12,14 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "chatRoom")
 public class ChatRoom {
     @Id
-    private Long id;
+    private String id;
     private List<ChatRoomMember> chatRoomMembers;
     private String roomNumber;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     @Builder
-    public ChatRoom(Long id, List<ChatRoomMember> chatRoomMembers, String roomNumber,
+    public ChatRoom(String id, List<ChatRoomMember> chatRoomMembers, String roomNumber,
         LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.chatRoomMembers = chatRoomMembers;

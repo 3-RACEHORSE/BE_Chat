@@ -11,6 +11,5 @@ public interface ChatRoomRepository extends MongoRepository<ChatRoom, String> {
     List<ChatRoom> findAllByChatRoomMembers_MemberUuid(String uuid);
     Optional<ChatRoom> findByRoomNumber(String roomNumber);
 //    List<ChatRoom> findByMemberUuidsContaining(String memberUuid);
-    Optional<ChatRoom> findByRoomNumberAndChatRoomMembers_MemberUuid(String roomNumber, String memberUuid);
     List<ChatRoom> findAll();
 }
