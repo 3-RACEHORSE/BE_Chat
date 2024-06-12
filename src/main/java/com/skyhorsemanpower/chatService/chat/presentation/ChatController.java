@@ -2,16 +2,17 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomListElementDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
+import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -69,7 +70,7 @@ public class ChatController {
 
     @GetMapping("/chatRooms")
     @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
-    public List<ChatRoomListElementDto> getChatRooms(@RequestHeader String uuid) {
+    public List<ChatRoomResponseVo> getChatRooms(@RequestHeader String uuid) {
         return chatService.getChatRoomsByUuid(uuid);
     }
 
@@ -93,13 +94,13 @@ public class ChatController {
         return chatService.getChat(roomNumber, uuid);
     }
 
-    @GetMapping(value = "/readCount/{roomNumber}")
-    @Operation(summary = "안읽은 채팅 갯수 표시", description = "채팅방 리스트에서 안읽은 채팅 갯수를 표시")
-    public SuccessResponse<Integer> unReadChatCount(@PathVariable(value = "roomNumber") String roomNumber,
-        @RequestHeader String uuid) {
-        int count = chatService.getUnreadChatCount(roomNumber, uuid);
-        return new SuccessResponse<>(count);
-    }
+//    @GetMapping(value = "/readCount/{roomNumber}")
+//    @Operation(summary = "안읽은 채팅 갯수 표시", description = "채팅방 리스트에서 안읽은 채팅 갯수를 표시")
+//    public SuccessResponse<Integer> unReadChatCount(@PathVariable(value = "roomNumber") String roomNumber,
+//        @RequestHeader String uuid) {
+//        int count = chatService.getUnreadChatCount(roomNumber, uuid);
+//        return new SuccessResponse<>(count);
+//    }
 
     @PutMapping("/leaveChatRoom")
     @Operation(summary = "입장정보 삭제", description = "검색한 곳에서 상태가 바뀌면 beforeUnload를 실행시키고\n\n"
@@ -110,10 +111,19 @@ public class ChatController {
         return new SuccessResponse<>(null);
     }
 
-    @GetMapping(value = "/lastChat/{roomNumber}")
-    public SuccessResponse<LastChatVo> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+    @GetMapping(value = "/roomNumber/{roomNumber}/last")
+    @Operation(summary = "채팅 리스트 불러올 때, 마지막 채팅", description = "첫 채팅 리스트를 불러올 때 마지막 채팅 조회")
+    public SuccessResponse<LastChatVo> lastChatSync(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
-        LastChatVo lastChatVo = chatService.getLastChat(uuid, roomNumber);
+        LastChatVo lastChatVo = chatService.getLastChatSync(uuid, roomNumber);
+        return new SuccessResponse<>(lastChatVo);
+    }
+
+    @GetMapping(value = "/roomNumber/{roomNumber}/new", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "계속 바뀌는 마지막 채팅", description = "계속 변화를 감지해 변하는 마지막 채팅")
+    public SuccessResponse<Flux<LastChatVo>> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
         return new SuccessResponse<>(lastChatVo);
     }
 }
