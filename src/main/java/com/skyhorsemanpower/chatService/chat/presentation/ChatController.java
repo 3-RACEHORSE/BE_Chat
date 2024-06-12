@@ -111,10 +111,19 @@ public class ChatController {
         return new SuccessResponse<>(null);
     }
 
-    @GetMapping(value = "/lastChat/{roomNumber}")
-    public SuccessResponse<LastChatVo> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+    @GetMapping(value = "/roomNumber/{roomNumber}/last")
+    @Operation(summary = "채팅 리스트 불러올 때, 마지막 채팅", description = "첫 채팅 리스트를 불러올 때 마지막 채팅 조회")
+    public SuccessResponse<LastChatVo> lastChatSync(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
-        LastChatVo lastChatVo = chatService.getLastChat(uuid, roomNumber);
+        LastChatVo lastChatVo = chatService.getLastChatSync(uuid, roomNumber);
+        return new SuccessResponse<>(lastChatVo);
+    }
+
+    @GetMapping(value = "/roomNumber/{roomNumber}/new", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "계속 바뀌는 마지막 채팅", description = "계속 변화를 감지해 변하는 마지막 채팅")
+    public SuccessResponse<Flux<LastChatVo>> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
         return new SuccessResponse<>(lastChatVo);
     }
 }

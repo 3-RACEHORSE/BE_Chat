@@ -1,6 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
@@ -23,6 +24,7 @@ import com.skyhorsemanpower.chatService.common.RandomHandleGenerator;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,10 +32,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.ChangeStreamEvent;
+import org.springframework.data.mongodb.core.ChangeStreamOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -53,6 +60,7 @@ public class ChatServiceImp implements ChatService {
     private final ChatSyncRepository chatSyncRepository;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
+    private final ReactiveMongoTemplate reactiveMongoTemplate;
     private final MongoTemplate mongoTemplate;
 
     @Override
@@ -308,7 +316,8 @@ public class ChatServiceImp implements ChatService {
         log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
     @Override
-    public LastChatVo getLastChat(String uuid, String roomNumber) {
+    public LastChatVo getLastChatSync(String uuid, String roomNumber) {
+        // 첫 리스트 화면 출력을 위해 마지막 채팅 1개 들고익
         Optional<Chat> optionalChat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(roomNumber);
         if (optionalChat.isPresent()) {
             return LastChatVo.builder()
@@ -319,4 +328,29 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.NO_DATA);
         }
     }
+    @Override
+    public Flux<LastChatVo> getLastChat(String uuid, String roomNumber) {
+        log.info("실시간 마지막 채팅 들고오기: {}", roomNumber);
+        ChangeStreamOptions options = ChangeStreamOptions.builder()
+            // DB의 insert를 감지
+            .filter(Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("operationType").is(OperationType.INSERT.getValue())),
+                // roomNumber랑 일치하는지
+                Aggregation.match(Criteria.where("fullDocument.roomNumber").is(roomNumber))
+            ))
+            .build();
+        // 해당 변경 사항을 들고오기
+        return reactiveMongoTemplate.changeStream("chat", options, Document.class)
+            .map(ChangeStreamEvent::getBody)
+            .map(document -> {
+                log.info("검색: {}", document);
+                return LastChatVo.builder()
+                    .content(document.getString("content"))
+                    .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(), ZoneId.systemDefault()))
+                    .build();
+            });
+    }
+
+
+
 }
