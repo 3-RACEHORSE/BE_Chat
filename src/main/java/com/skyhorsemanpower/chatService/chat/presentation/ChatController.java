@@ -118,4 +118,12 @@ public class ChatController {
         LastChatVo lastChatVo = chatService.getLastChatSync(uuid, roomNumber);
         return new SuccessResponse<>(lastChatVo);
     }
+
+    @GetMapping(value = "/roomNumber/{roomNumber}/new", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "계속 바뀌는 마지막 채팅", description = "계속 변화를 감지해 변하는 마지막 채팅")
+    public SuccessResponse<Flux<LastChatVo>> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
+        return new SuccessResponse<>(lastChatVo);
+    }
 }
