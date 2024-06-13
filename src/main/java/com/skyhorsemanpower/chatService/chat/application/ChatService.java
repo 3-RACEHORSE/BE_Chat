@@ -18,8 +18,8 @@ public interface ChatService {
     Flux<GetChatVo> getChat(String roomNumber, String uuid);
     List<ChatRoomResponseVo> getChatRoomsByUuid(String uuid);
     PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size);
-    void enteringMember(String uuid, String roomNumber);
-    String findOtherMemberUuid(String uuid, String roomNumber);
+//    void enteringMember(String uuid, String roomNumber);
+//    String findOtherMemberUuid(String uuid, String roomNumber);
 
 //    int getUnreadChatCount(String roomNumber, String uuid);
     void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto);
