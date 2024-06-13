@@ -48,7 +48,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
 
 @Service
@@ -87,7 +86,7 @@ public class ChatServiceImp implements ChatService {
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
                     .roomNumber(roomNumber)
-//                    .lastReadTime(LocalDateTime.now())
+                    .lastReadTime(LocalDateTime.now())
                     .build();
             }).collect(Collectors.toList());
 
@@ -149,7 +148,7 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
-        enteringMember(uuid, roomNumber);
+//        enteringMember(uuid, roomNumber);
 
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
             uuid, roomNumber).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
@@ -233,71 +232,69 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
+//    @Override
+//    public void enteringMember(String uuid, String roomNumber) {
+//        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
+//        log.info("otherUuid : {}", otherUuid);
+//        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
+//        try {
+//            // 데이터를 JSON 형식으로 변환
+//            ObjectMapper objectMapper = new ObjectMapper();
+//            EnteringMemberDto enteringMemberDto =
+//                EnteringMemberDto.builder()
+//                    .roomNumber(roomNumber)
+//                    .uuid(uuid)
+//                    .build();
+//            String jsonData = objectMapper.writeValueAsString(enteringMemberDto);
+//
+//            // Redis에 데이터 저장
+//            String redisKey = "room:" + roomNumber + ":member:" + uuid;
+//            redisTemplate.opsForValue().set(redisKey, jsonData);
+//
+//        } catch (Exception e) {
+//            log.error("Redis에 데이터 저장 중 오류 발생", e);
+//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
+//        }
+//    }
+//    @Override
+//    public String findOtherMemberUuid(String uuid, String roomNumber) {
+//        log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
+//
+//        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(roomNumber);
+//
+//        if (chatRoomMembers.isEmpty()) {
+//            log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
+//            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+//        }
+//
+//        for (ChatRoomMember member : chatRoomMembers) {
+//            if (!member.getMemberUuid().equals(uuid)) {
+//                log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
+//                return member.getMemberUuid();
+//            }
+//        }
+//
+//        log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
+//        throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+//    }
 
-
-    @Override
-    public void enteringMember(String uuid, String roomNumber) {
-        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
-        log.info("otherUuid : {}", otherUuid);
-        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
-        try {
-            // 데이터를 JSON 형식으로 변환
-            ObjectMapper objectMapper = new ObjectMapper();
-            EnteringMemberDto enteringMemberDto =
-                EnteringMemberDto.builder()
-                    .roomNumber(roomNumber)
-                    .uuid(uuid)
-                    .build();
-            String jsonData = objectMapper.writeValueAsString(enteringMemberDto);
-
-            // Redis에 데이터 저장
-            String redisKey = "room:" + roomNumber + ":member:" + uuid;
-            redisTemplate.opsForValue().set(redisKey, jsonData);
-
-        } catch (Exception e) {
-            log.error("Redis에 데이터 저장 중 오류 발생", e);
-            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
-        }
-    }
-    @Override
-    public String findOtherMemberUuid(String uuid, String roomNumber) {
-        log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
-
-        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(roomNumber);
-
-        if (chatRoomMembers.isEmpty()) {
-            log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
-            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-        }
-
-        for (ChatRoomMember member : chatRoomMembers) {
-            if (!member.getMemberUuid().equals(uuid)) {
-                log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
-                return member.getMemberUuid();
-            }
-        }
-
-        log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
-        throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-    }
-
-    private boolean isMemberDataExists(String uuid, String roomNumber) {
-        try {
-            String redisKey = "room:" + roomNumber + ":member:" + uuid;
-            Boolean exists = redisTemplate.hasKey(redisKey);
-
-            if (exists != null && exists) {
-                log.info("Redis에 데이터가 존재합니다: roomNumber={}, uuid={}", roomNumber, uuid);
-                return true;
-            } else {
-                log.info("Redis에 데이터가 존재하지 않습니다: roomNumber={}, uuid={}", roomNumber, uuid);
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Redis에서 데이터 존재 여부 확인 중 오류 발생", e);
-            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
-        }
-    }
+//    private boolean isMemberDataExists(String uuid, String roomNumber) {
+//        try {
+//            String redisKey = "room:" + roomNumber + ":member:" + uuid;
+//            Boolean exists = redisTemplate.hasKey(redisKey);
+//
+//            if (exists != null && exists) {
+//                log.info("Redis에 데이터가 존재합니다: roomNumber={}, uuid={}", roomNumber, uuid);
+//                return true;
+//            } else {
+//                log.info("Redis에 데이터가 존재하지 않습니다: roomNumber={}, uuid={}", roomNumber, uuid);
+//                return false;
+//            }
+//        } catch (Exception e) {
+//            log.error("Redis에서 데이터 존재 여부 확인 중 오류 발생", e);
+//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
+//        }
+//    }
 
 //    @Override
 //    public int getUnreadChatCount(String roomNumber, String uuid) {
@@ -314,9 +311,14 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
-        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
-        redisTemplate.delete(redisKey);
-        log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
+//        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
+//        redisTemplate.delete(redisKey);
+        mongoTemplate.updateFirst(
+            Query.query(Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber").is(leaveChatRoomDto.getRoomNumber())),
+            Update.update("lastReadTime", LocalDateTime.now()),
+            ChatRoomMember.class
+        );
+        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
     @Override
     public LastChatVo getLastChatSync(String uuid, String roomNumber) {
@@ -353,15 +355,4 @@ public class ChatServiceImp implements ChatService {
                     .build();
             });
     }
-    public Mono<Void> updateLastReadTime(String roomNumber, String uuid) {
-        return reactiveMongoTemplate.updateFirst(
-                Query.query(Criteria.where("memberUuid").is(uuid).and("roomNumber").is(roomNumber)),
-                Update.update("lastReadTime", LocalDateTime.now()),
-                ChatRoomMember.class
-            )
-            .then();
-    }
-
-
-
 }
