@@ -79,16 +79,18 @@ public class ChatServiceImp implements ChatService {
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
                 String profile = RandomHandleGenerator.randomProfile();
+                // Todo 관리자 전용 프로필과 handle을 만들어야함 관리자 판별 기준은 uuid앞에 admin 추가
                 return ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
                     .memberHandle(handle)
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
                     .roomNumber(roomNumber)
+                    .lastReadTime(LocalDateTime.now())
                     .build();
             }).collect(Collectors.toList());
 
-            // Create the ChatRoom instance with chatRoomMembers
+            // 채팅방 저장
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
                 .createdAt(LocalDateTime.now())
@@ -101,7 +103,7 @@ public class ChatServiceImp implements ChatService {
             chatRoomRepository.save(chatRoom);
             log.info("ChatRoom 저장완료: {}", roomNumber);
 
-            // Save each chatRoomMember
+            // 채팅방 회원 저장
             chatRoomMembers.forEach(chatRoomMember -> {
                 chatRoomMemberRepository.save(chatRoomMember);
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
@@ -146,7 +148,7 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
-        enteringMember(uuid, roomNumber);
+//        enteringMember(uuid, roomNumber);
 
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
             uuid, roomNumber).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
@@ -165,7 +167,7 @@ public class ChatServiceImp implements ChatService {
                     .createdAt(chatVo.getCreatedAt())
                     .build();
                 return Mono.just(getChatVo);
-                });
+            });
     }
 
     @Override
@@ -230,71 +232,69 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
+//    @Override
+//    public void enteringMember(String uuid, String roomNumber) {
+//        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
+//        log.info("otherUuid : {}", otherUuid);
+//        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
+//        try {
+//            // 데이터를 JSON 형식으로 변환
+//            ObjectMapper objectMapper = new ObjectMapper();
+//            EnteringMemberDto enteringMemberDto =
+//                EnteringMemberDto.builder()
+//                    .roomNumber(roomNumber)
+//                    .uuid(uuid)
+//                    .build();
+//            String jsonData = objectMapper.writeValueAsString(enteringMemberDto);
+//
+//            // Redis에 데이터 저장
+//            String redisKey = "room:" + roomNumber + ":member:" + uuid;
+//            redisTemplate.opsForValue().set(redisKey, jsonData);
+//
+//        } catch (Exception e) {
+//            log.error("Redis에 데이터 저장 중 오류 발생", e);
+//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
+//        }
+//    }
+//    @Override
+//    public String findOtherMemberUuid(String uuid, String roomNumber) {
+//        log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
+//
+//        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(roomNumber);
+//
+//        if (chatRoomMembers.isEmpty()) {
+//            log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
+//            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+//        }
+//
+//        for (ChatRoomMember member : chatRoomMembers) {
+//            if (!member.getMemberUuid().equals(uuid)) {
+//                log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
+//                return member.getMemberUuid();
+//            }
+//        }
+//
+//        log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
+//        throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
+//    }
 
-
-    @Override
-    public void enteringMember(String uuid, String roomNumber) {
-        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
-        log.info("otherUuid : {}", otherUuid);
-        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
-        try {
-            // 데이터를 JSON 형식으로 변환
-            ObjectMapper objectMapper = new ObjectMapper();
-            EnteringMemberDto enteringMemberDto =
-                EnteringMemberDto.builder()
-                    .roomNumber(roomNumber)
-                    .uuid(uuid)
-                    .build();
-            String jsonData = objectMapper.writeValueAsString(enteringMemberDto);
-
-            // Redis에 데이터 저장
-            String redisKey = "room:" + roomNumber + ":member:" + uuid;
-            redisTemplate.opsForValue().set(redisKey, jsonData);
-
-        } catch (Exception e) {
-            log.error("Redis에 데이터 저장 중 오류 발생", e);
-            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
-        }
-    }
-    @Override
-    public String findOtherMemberUuid(String uuid, String roomNumber) {
-        log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
-
-        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(roomNumber);
-
-        if (chatRoomMembers.isEmpty()) {
-            log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
-            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-        }
-
-        for (ChatRoomMember member : chatRoomMembers) {
-            if (!member.getMemberUuid().equals(uuid)) {
-                log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
-                return member.getMemberUuid();
-            }
-        }
-
-        log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
-        throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-    }
-
-    private boolean isMemberDataExists(String uuid, String roomNumber) {
-        try {
-            String redisKey = "room:" + roomNumber + ":member:" + uuid;
-            Boolean exists = redisTemplate.hasKey(redisKey);
-
-            if (exists != null && exists) {
-                log.info("Redis에 데이터가 존재합니다: roomNumber={}, uuid={}", roomNumber, uuid);
-                return true;
-            } else {
-                log.info("Redis에 데이터가 존재하지 않습니다: roomNumber={}, uuid={}", roomNumber, uuid);
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Redis에서 데이터 존재 여부 확인 중 오류 발생", e);
-            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
-        }
-    }
+//    private boolean isMemberDataExists(String uuid, String roomNumber) {
+//        try {
+//            String redisKey = "room:" + roomNumber + ":member:" + uuid;
+//            Boolean exists = redisTemplate.hasKey(redisKey);
+//
+//            if (exists != null && exists) {
+//                log.info("Redis에 데이터가 존재합니다: roomNumber={}, uuid={}", roomNumber, uuid);
+//                return true;
+//            } else {
+//                log.info("Redis에 데이터가 존재하지 않습니다: roomNumber={}, uuid={}", roomNumber, uuid);
+//                return false;
+//            }
+//        } catch (Exception e) {
+//            log.error("Redis에서 데이터 존재 여부 확인 중 오류 발생", e);
+//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
+//        }
+//    }
 
 //    @Override
 //    public int getUnreadChatCount(String roomNumber, String uuid) {
@@ -311,9 +311,14 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
-        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
-        redisTemplate.delete(redisKey);
-        log.info("Deleted entry for room {} and member {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
+//        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
+//        redisTemplate.delete(redisKey);
+        mongoTemplate.updateFirst(
+            Query.query(Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber").is(leaveChatRoomDto.getRoomNumber())),
+            Update.update("lastReadTime", LocalDateTime.now()),
+            ChatRoomMember.class
+        );
+        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
     @Override
     public LastChatVo getLastChatSync(String uuid, String roomNumber) {
@@ -350,7 +355,4 @@ public class ChatServiceImp implements ChatService {
                     .build();
             });
     }
-
-
-
 }

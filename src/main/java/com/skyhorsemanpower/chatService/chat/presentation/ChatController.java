@@ -12,7 +12,6 @@ import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
-import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,15 +57,6 @@ public class ChatController {
         chatService.sendChat(sendChatRequestDto, uuid);
         return new SuccessResponse<>(null);
     }
-
-//    @GetMapping(value = "/roomNumber/{roomNumber}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-//    @Operation(summary = "채팅방 메시지 조회", description = "채팅방에서 전체 메시지를 조회")
-//    public SuccessResponse<Flux<ChatVo>> getChat(
-//        @PathVariable(value = "roomNumber") String roomNumber) {
-//        log.info("roomNumber: {}", roomNumber);
-//        Flux<ChatVo> chatVo = chatService.getChat(roomNumber);
-//        return new SuccessResponse<>(chatVo);
-//    }
 
     @GetMapping("/chatRooms")
     @Operation(summary = "채팅방 리스트 조회", description = "웹소켓 방식으로 채팅방 리스트, 마지막 채팅을 조회")
