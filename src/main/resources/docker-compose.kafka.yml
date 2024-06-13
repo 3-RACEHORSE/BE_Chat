@@ -1,0 +1,69 @@
+version: '3.7'
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+ 
+  kafka1:
+    container_name: kafka1
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    restart: always # https://github.com/wurstmeister/kafka-docker/issues/389
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:29092,EXTERNAL://52.79.127.196:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      # KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # kafka2:
+  #   container_name: kafka2
+  #   image: confluentinc/cp-kafka:latest
+  #   depends_on:
+  #     - zookeeper
+  #   ports:
+  #     - "9093:9093"
+  #   environment:
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29093,PLAINTEXT_HOST://localhost:9093
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_DEFAULT_REPLICATION_FACTOR: 32
+  #     KAFKA_NUM_PARTITIONS: 3
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   networks:
+  #     - cheonma-network
+
+  # kafka3:
+  #   container_name: kafka3
+  #   image: confluentinc/cp-kafka:latest
+  #   depends_on:
+  #     - zookeeper
+  #   ports:
+  #     - "9094:9094"
+  #   environment:
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:29094,PLAINTEXT_HOST://localhost:9094
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  #     KAFKA_NUM_PARTITIONS: 3
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   networks:
+  #     - cheonma-network
