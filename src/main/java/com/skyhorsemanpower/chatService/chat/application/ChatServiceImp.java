@@ -48,6 +48,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
 
 @Service
@@ -79,16 +80,18 @@ public class ChatServiceImp implements ChatService {
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
                 String profile = RandomHandleGenerator.randomProfile();
+                // Todo 관리자 전용 프로필과 handle을 만들어야함 관리자 판별 기준은 uuid앞에 admin 추가
                 return ChatRoomMember.builder()
                     .memberUuid(dto.getMemberUuid())
                     .memberHandle(handle)
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
                     .roomNumber(roomNumber)
+//                    .lastReadTime(LocalDateTime.now())
                     .build();
             }).collect(Collectors.toList());
 
-            // Create the ChatRoom instance with chatRoomMembers
+            // 채팅방 저장
             ChatRoom chatRoom = ChatRoom.builder()
                 .roomNumber(roomNumber)
                 .createdAt(LocalDateTime.now())
@@ -101,7 +104,7 @@ public class ChatServiceImp implements ChatService {
             chatRoomRepository.save(chatRoom);
             log.info("ChatRoom 저장완료: {}", roomNumber);
 
-            // Save each chatRoomMember
+            // 채팅방 회원 저장
             chatRoomMembers.forEach(chatRoomMember -> {
                 chatRoomMemberRepository.save(chatRoomMember);
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
@@ -165,7 +168,7 @@ public class ChatServiceImp implements ChatService {
                     .createdAt(chatVo.getCreatedAt())
                     .build();
                 return Mono.just(getChatVo);
-                });
+            });
     }
 
     @Override
@@ -349,6 +352,14 @@ public class ChatServiceImp implements ChatService {
                     .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(), ZoneId.systemDefault()))
                     .build();
             });
+    }
+    public Mono<Void> updateLastReadTime(String roomNumber, String uuid) {
+        return reactiveMongoTemplate.updateFirst(
+                Query.query(Criteria.where("memberUuid").is(uuid).and("roomNumber").is(roomNumber)),
+                Update.update("lastReadTime", LocalDateTime.now()),
+                ChatRoomMember.class
+            )
+            .then();
     }
 
 
