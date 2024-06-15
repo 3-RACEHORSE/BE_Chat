@@ -161,6 +161,7 @@ public class ChatServiceImp implements ChatService {
                 roomNumber, now)
             .flatMap(chatVo -> {
                 GetChatVo getChatVo = GetChatVo.builder()
+                    .uuid(chatVo.getSenderUuid())
                     .handle(handle)
                     .profileImage(profileImage)
                     .content(chatVo.getContent())
@@ -218,7 +219,6 @@ public class ChatServiceImp implements ChatService {
                             .profileImage(profileImage)
                             .content(chatDto.getContent())
                             .createdAt(chatDto.getCreatedAt())
-                            .readCount(chatDto.getReadCount())
                             .build();
                     }).collect(Collectors.toList());
 

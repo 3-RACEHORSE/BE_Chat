@@ -6,14 +6,16 @@ import lombok.Getter;
 
 @Getter
 public class GetChatVo {
+    private String uuid;
     private String content;
     private LocalDateTime createdAt;
     private String handle;
     private String profileImage;
 
     @Builder
-    public GetChatVo(String content, LocalDateTime createdAt, String handle,
+    public GetChatVo(String uuid, String content, LocalDateTime createdAt, String handle,
         String profileImage) {
+        this.uuid = uuid;
         this.content = content;
         this.createdAt = createdAt;
         this.handle = handle;
