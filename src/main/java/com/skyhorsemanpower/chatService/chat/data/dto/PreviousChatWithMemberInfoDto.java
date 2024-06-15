@@ -7,19 +7,19 @@ import lombok.Builder;
 import lombok.Getter;
 @Getter
 public class PreviousChatWithMemberInfoDto {
+    private String uuid;
     private String handle;
     private String profileImage;
     private String content;
     private LocalDateTime createdAt;
-    private int readCount;
 
     @Builder
-    public PreviousChatWithMemberInfoDto(String handle, String profileImage, String content,
-        LocalDateTime createdAt, int readCount) {
+    public PreviousChatWithMemberInfoDto(String uuid, String handle, String profileImage,
+        String content, LocalDateTime createdAt) {
+        this.uuid = uuid;
         this.handle = handle;
         this.profileImage = profileImage;
         this.content = content;
         this.createdAt = createdAt;
-        this.readCount = readCount;
     }
 }
