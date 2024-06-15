@@ -36,7 +36,7 @@ import reactor.core.publisher.Sinks;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/authorization/chat")
-@CrossOrigin(origins = "https://fe-meetplus.vercel.app/")
+@CrossOrigin(origins = "*")
 @Tag(name = "채팅", description = "채팅 관련 API")
 @Slf4j
 public class ChatController {
