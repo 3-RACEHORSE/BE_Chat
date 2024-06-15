@@ -20,6 +20,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,7 @@ import reactor.core.publisher.Sinks;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/authorization/chat")
+@CrossOrigin(origins = "*")
 @Tag(name = "채팅", description = "채팅 관련 API")
 @Slf4j
 public class ChatController {
