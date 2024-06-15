@@ -148,28 +148,31 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
-//        enteringMember(uuid, roomNumber);
-
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
             uuid, roomNumber).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
 
         LocalDateTime now = LocalDateTime.now();
-        String handle = chatRoomMember.getMemberHandle();
-        String profileImage = chatRoomMember.getMemberProfileImage();
 
         return chatRepository.findChatByRoomNumberAndCreatedAtOrAfterOrdOrderByCreatedAtDesc(
                 roomNumber, now)
             .flatMap(chatVo -> {
-                GetChatVo getChatVo = GetChatVo.builder()
-                    .uuid(chatVo.getSenderUuid())
-                    .handle(handle)
-                    .profileImage(profileImage)
-                    .content(chatVo.getContent())
-                    .createdAt(chatVo.getCreatedAt())
-                    .build();
-                return Mono.just(getChatVo);
+                String senderUuid = chatVo.getSenderUuid();
+                return Mono.justOrEmpty(chatRoomMemberRepository.findByMemberUuidAndRoomNumber(senderUuid, roomNumber))
+                    .switchIfEmpty(Mono.error(new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER)))
+                    .map(sender -> {
+                        GetChatVo getChatVo = GetChatVo.builder()
+                            .uuid(senderUuid)
+                            .handle(sender.getMemberHandle())
+                            .profileImage(sender.getMemberProfileImage())
+                            .content(chatVo.getContent())
+                            .createdAt(chatVo.getCreatedAt())
+                            .build();
+                        return getChatVo;
+                    });
             });
     }
+
+
 
     @Override
     public List<ChatRoomResponseVo> getChatRoomsByUuid(String uuid) {
