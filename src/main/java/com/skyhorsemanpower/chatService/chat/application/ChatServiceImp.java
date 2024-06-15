@@ -2,12 +2,14 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.model.changestream.OperationType;
+import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
+import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
@@ -20,6 +22,7 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomMemberRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
+import com.skyhorsemanpower.chatService.common.AuctionPostClient;
 import com.skyhorsemanpower.chatService.common.RandomHandleGenerator;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
@@ -46,6 +49,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -62,20 +66,21 @@ public class ChatServiceImp implements ChatService {
     private final RedisTemplate<String, String> redisTemplate;
     private final ReactiveMongoTemplate reactiveMongoTemplate;
     private final MongoTemplate mongoTemplate;
+    private final AuctionPostClient auctionPostClient;
 
+    @Transactional
     @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
 
-        if (chatMemberDtos.size() < 2) {
-            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
-        }
+//        if (chatMemberDtos.size() < 2) {
+//            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
+//        }
 
         try {
             String roomNumber = UUID.randomUUID().toString();
 
-            // Create the list of ChatRoomMembers
+            // 채팅방 회원 만들기
             List<ChatRoomMember> chatRoomMembers = chatMemberDtos.stream().map(dto -> {
-                log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
                 String profile = RandomHandleGenerator.randomProfile();
@@ -116,6 +121,7 @@ public class ChatServiceImp implements ChatService {
     }
 
 
+    @Transactional
     @Override
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
         // 채팅방의 회원인지 확인
@@ -135,7 +141,8 @@ public class ChatServiceImp implements ChatService {
         }
     }
 
-    private void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
+    @Transactional
+    protected void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
         log.info("saveChatMessage 시작");
         Chat chat = Chat.builder()
             .senderUuid(uuid)
@@ -310,6 +317,7 @@ public class ChatServiceImp implements ChatService {
 //    }
 
     @Override
+    @Transactional
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
 //        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
 //        redisTemplate.delete(redisKey);
@@ -354,5 +362,18 @@ public class ChatServiceImp implements ChatService {
                     .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(), ZoneId.systemDefault()))
                     .build();
             });
+    }
+
+    @Override
+    public void convertToChatRoomData(BeforeChatRoomDto beforeChatRoomDto) {
+        AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient.getAuctionInfo(beforeChatRoomDto.getAuctionUuid());
+        log.info(auctionInfoResponseVo.toString());
+    }
+
+    @Override
+    public void test() {
+        String auctionUuid = "202406120010-ce8888c96d";
+        AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient.getAuctionInfo(auctionUuid);
+        log.info(auctionInfoResponseVo.toString());
     }
 }

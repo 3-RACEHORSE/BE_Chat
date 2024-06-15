@@ -1,5 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.data.vo;
 
+import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,5 +18,12 @@ public class BeforeChatRoomVo {
     public BeforeChatRoomVo(String auctionUuid, List<String> memberUuids) {
         this.auctionUuid = auctionUuid;
         this.memberUuids = memberUuids;
+    }
+
+    public BeforeChatRoomDto toBeforeChatRoomDto() {
+        return BeforeChatRoomDto.builder()
+            .auctionUuid(this.auctionUuid)
+            .memberUuids(this.memberUuids)
+            .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
+import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
@@ -26,4 +27,7 @@ public interface ChatService {
     LastChatVo getLastChatSync(String uuid, String roomNumber);
 
     Flux<LastChatVo> getLastChat(String uuid, String roomNumber);
+
+    void convertToChatRoomData(BeforeChatRoomDto beforeChatRoomDto);
+    void test();
 }

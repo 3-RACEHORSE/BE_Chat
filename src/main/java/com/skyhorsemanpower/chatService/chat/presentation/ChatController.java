@@ -116,4 +116,10 @@ public class ChatController {
         Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
         return new SuccessResponse<>(lastChatVo);
     }
+
+    @GetMapping("/test")
+    public SuccessResponse<Object> test() {
+        chatService.test();
+        return new SuccessResponse<>(null);
+    }
 }

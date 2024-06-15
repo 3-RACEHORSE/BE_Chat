@@ -17,9 +17,8 @@ import org.springframework.stereotype.Component;
 public class KafkaConsumerCluster {
 
     private final ChatService chatService;
-
-    @KafkaListener(topics = "payment-close-topic", groupId = "${spring.kafka.consumer.group-id}")
-    public void consume(@Payload LinkedHashMap<String, Object> message,
+    @KafkaListener(topics = "auction-close-topic", groupId = "${spring.kafka.consumer.group-id}")
+    public void consumeAuction(@Payload LinkedHashMap<String, Object> message,
         @Headers MessageHeaders messageHeaders) {
         log.info("consumer: success >>> message: {}, headers: {}", message.toString(),
             messageHeaders);
@@ -30,5 +29,20 @@ public class KafkaConsumerCluster {
             .build();
         log.info("auctionUuid : {}", beforeChatRoomVo.getAuctionUuid());
         log.info("memberUuids : {}", beforeChatRoomVo.getMemberUuids());
+        chatService.convertToChatRoomData(beforeChatRoomVo.toBeforeChatRoomDto());
+    }
+    @KafkaListener(topics = "payment-close-topic", groupId = "${spring.kafka.consumer.group-id}")
+    public void consumePayment(@Payload LinkedHashMap<String, Object> message,
+        @Headers MessageHeaders messageHeaders) {
+        log.info("consumer: success >>> message: {}, headers: {}", message.toString(),
+            messageHeaders);
+        //message를 PaymentReadyVo로 변환
+        BeforeChatRoomVo beforeChatRoomVo = BeforeChatRoomVo.builder()
+            .auctionUuid(message.get("auctionUuid").toString())
+            .memberUuids((List<String>) message.get("memberUuids"))
+            .build();
+        log.info("auctionUuid : {}", beforeChatRoomVo.getAuctionUuid());
+        log.info("memberUuids : {}", beforeChatRoomVo.getMemberUuids());
+        chatService.convertToChatRoomData(beforeChatRoomVo.toBeforeChatRoomDto());
     }
 }
