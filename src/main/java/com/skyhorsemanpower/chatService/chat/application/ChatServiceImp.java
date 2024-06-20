@@ -3,12 +3,14 @@ package com.skyhorsemanpower.chatService.chat.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -358,5 +360,16 @@ public class ChatServiceImp implements ChatService {
                     .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(), ZoneId.systemDefault()))
                     .build();
             });
+    }
+
+    @Override
+    public ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber) {
+        ChatRoom chatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(roomNumber, uuid)
+            .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+        ChatRoomTitleResponseDto chatRoomTitleResponseDto = ChatRoomTitleResponseDto.builder()
+            .title(chatRoom.getTitle())
+            .build();
+        return chatRoomTitleResponseDto;
+
     }
 }
