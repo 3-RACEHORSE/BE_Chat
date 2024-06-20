@@ -2,10 +2,12 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -117,5 +119,12 @@ public class ChatController {
         @RequestHeader String uuid) {
         Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
         return new SuccessResponse<>(lastChatVo);
+    }
+    @GetMapping(value = "/roomNumber/{roomNumber}/title")
+    @Operation(summary = "채팅방 제목", description = "채팅방 상단의 제목")
+    public SuccessResponse<ChatRoomTitleResponseVo> chatRoomTitle(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        return new SuccessResponse<>(
+            ChatRoomTitleResponseDto.dtoToVo(chatService.getChatRoomTitle(uuid, roomNumber)));
     }
 }
