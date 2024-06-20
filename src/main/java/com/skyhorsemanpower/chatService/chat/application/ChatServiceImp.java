@@ -111,11 +111,12 @@ public class ChatServiceImp implements ChatService {
             ChatRoomMember admin = ChatRoomMember.builder()
                 .memberUuid(extractAuctionInformationWithMemberUuidsDto.getAdminUuid())
                 .memberHandle("관리자")
-                // 랜덤 프로필 생성 이미지
                 .memberProfileImage(extractAuctionInformationWithMemberUuidsDto.getThumbnail())
                 .roomNumber(roomNumber)
                 .lastReadTime(LocalDateTime.now())
                 .build();
+
+            chatRoomMemberRepository.save(admin);
 
             // 채팅방 회원 저장
             chatRoomMembers.forEach(chatRoomMember -> {
