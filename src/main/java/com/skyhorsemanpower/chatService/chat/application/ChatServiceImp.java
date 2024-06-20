@@ -218,6 +218,7 @@ public class ChatServiceImp implements ChatService {
                             .orElse(null);
 
                         return PreviousChatWithMemberInfoDto.builder()
+                            .uuid(chatDto.getSenderUuid())
                             .handle(handle)
                             .profileImage(profileImage)
                             .content(chatDto.getContent())
