@@ -1,8 +1,13 @@
 package com.skyhorsemanpower.chatService.chat.data.vo;
 
+import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Builder;
+import lombok.Getter;
 
+@Builder
+@Getter
 public class AuctionInfoResponseVo {
 
     private String auctionPostId;
@@ -28,4 +33,11 @@ public class AuctionInfoResponseVo {
     private String thumbnail;
     private List<String> images;
 
+    public ExtractAuctionInformationWithMemberUuidsDto toExtractAuctionInformationWithMemberUuidsDto() {
+        return ExtractAuctionInformationWithMemberUuidsDto.builder()
+            .adminUuid(this.adminUuid)
+            .title(this.title)
+            .thumbnail(this.thumbnail)
+            .build();
+    }
 }

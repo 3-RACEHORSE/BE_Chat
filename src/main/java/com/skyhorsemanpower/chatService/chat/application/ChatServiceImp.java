@@ -1,10 +1,9 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
@@ -68,7 +67,6 @@ public class ChatServiceImp implements ChatService {
     private final MongoTemplate mongoTemplate;
     private final AuctionPostClient auctionPostClient;
 
-    @Transactional
     @Override
     public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
 
@@ -369,14 +367,11 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public void convertToChatRoomData(BeforeChatRoomDto beforeChatRoomDto) {
+        log.info("convertToChatRoomData 실행");
         AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient.getAuctionInfo(beforeChatRoomDto.getAuctionUuid());
-        log.info(auctionInfoResponseVo.toString());
+        ExtractAuctionInformationWithMemberUuidsDto extractAuctionInformationWithMemberUuidsDto = auctionInfoResponseVo.toExtractAuctionInformationWithMemberUuidsDto();
+        extractAuctionInformationWithMemberUuidsDto.setMemberUuids(beforeChatRoomDto.getMemberUuids());
+        createChatRoom(extractAuctionInformationWithMemberUuidsDto);
     }
 
-    @Override
-    public void test() {
-        String auctionUuid = "202406120010-ce8888c96d";
-        AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient.getAuctionInfo(auctionUuid);
-        log.info(auctionInfoResponseVo.toString());
-    }
 }

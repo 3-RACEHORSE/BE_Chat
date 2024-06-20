@@ -11,6 +11,6 @@ public enum ServerPathEnum {
     private final String server;
     public static class Constant {
         public static final String AUCTION_POST_SERVER = "http://52.79.127.196:8000/auctionpost-service";
-        public static final String AUCTION_INFO = "/api/v1/auction-post/{auctionUuid}";
+        public static final String AUCTION_INFO = "/api/v1/auction-post/{auctionUuid}/chat";
     }
 }
