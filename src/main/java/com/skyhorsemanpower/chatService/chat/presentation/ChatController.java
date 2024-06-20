@@ -43,13 +43,13 @@ public class ChatController {
     private final ChatService chatService;
     private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
 
-    @PostMapping("/room")
-    @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
-    public SuccessResponse<Object> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
-        List<ChatMemberDto> chatMemberDtos = addChatRoomRequestVo.toChatMemberDto();
-        chatService.createChatRoom(chatMemberDtos);
-        return new SuccessResponse<>(null);
-    }
+//    @PostMapping("/room")
+//    @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
+//    public SuccessResponse<Object> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
+//        List<ChatMemberDto> chatMemberDtos = addChatRoomRequestVo.toChatMemberDto();
+//        chatService.createChatRoom(chatMemberDtos);
+//        return new SuccessResponse<>(null);
+//    }
 
     @PostMapping
     @Operation(summary = "채팅 메시지 전송", description = "채팅방 안에서 사용자가 채팅을 보내기")

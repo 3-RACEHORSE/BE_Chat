@@ -68,7 +68,7 @@ public class ChatServiceImp implements ChatService {
     private final AuctionPostClient auctionPostClient;
 
     @Override
-    public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
+    public void createChatRoom(ExtractAuctionInformationWithMemberUuidsDto extractAuctionInformationWithMemberUuidsDto) {
 
 //        if (chatMemberDtos.size() < 2) {
 //            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
@@ -78,13 +78,14 @@ public class ChatServiceImp implements ChatService {
             String roomNumber = UUID.randomUUID().toString();
 
             // 채팅방 회원 만들기
-            List<ChatRoomMember> chatRoomMembers = chatMemberDtos.stream().map(dto -> {
+            List<ChatRoomMember> chatRoomMembers = extractAuctionInformationWithMemberUuidsDto
+                .getMemberUuids().stream().map(dto -> {
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
                 String profile = RandomHandleGenerator.randomProfile();
                 // Todo 관리자 전용 프로필과 handle을 만들어야함 관리자 판별 기준은 uuid앞에 admin 추가
                 return ChatRoomMember.builder()
-                    .memberUuid(dto.getMemberUuid())
+                    .memberUuid(dto)
                     .memberHandle(handle)
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
@@ -99,12 +100,22 @@ public class ChatServiceImp implements ChatService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .chatRoomMembers(chatRoomMembers)
-                .title("*** 공지방")
-                .thumbnail("https://ifh.cc/g/a3lcrS.png")
+                .title(extractAuctionInformationWithMemberUuidsDto.getTitle()+" 공지방")
+                .thumbnail(extractAuctionInformationWithMemberUuidsDto.getThumbnail())
                 .build();
 
             chatRoomRepository.save(chatRoom);
             log.info("ChatRoom 저장완료: {}", roomNumber);
+
+            // 관리자 채팅방 저장
+            ChatRoomMember admin = ChatRoomMember.builder()
+                .memberUuid(extractAuctionInformationWithMemberUuidsDto.getAdminUuid())
+                .memberHandle("관리자")
+                // 랜덤 프로필 생성 이미지
+                .memberProfileImage(extractAuctionInformationWithMemberUuidsDto.getThumbnail())
+                .roomNumber(roomNumber)
+                .lastReadTime(LocalDateTime.now())
+                .build();
 
             // 채팅방 회원 저장
             chatRoomMembers.forEach(chatRoomMember -> {
