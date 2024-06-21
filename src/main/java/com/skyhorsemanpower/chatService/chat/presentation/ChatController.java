@@ -17,6 +17,7 @@ import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -85,7 +86,17 @@ public class ChatController {
     public Flux<GetChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         log.info("getChat 실행: roomNumber={}, uuid={}", roomNumber, uuid);
-        return chatService.getChat(roomNumber, uuid);
+
+        // 채팅 메시지
+        Flux<GetChatVo> chatMessages = chatService.getChat(roomNumber, uuid);
+
+        // heartbeatTimeout 설정: 1일
+        Flux<GetChatVo> heartbeat = Flux.interval(Duration.ofDays(1))
+            .map(tick -> new GetChatVo());
+
+        // 결합된 스트림: 메시지와 하트비트
+        return chatMessages.mergeWith(heartbeat)
+            .doOnSubscribe(sub -> log.info("message, heartbeat"));
     }
 
     @PutMapping("/leaveChatRoom")
@@ -110,8 +121,16 @@ public class ChatController {
     public SuccessResponse<Flux<LastChatVo>> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
-        return new SuccessResponse<>(lastChatVo);
+        // Heartbeat 스트림
+        Flux<LastChatVo> heartbeat = Flux.interval(Duration.ofDays(1))
+            .map(tick -> new LastChatVo());
+
+        // 결합된 스트림: 실제 메시지와 heartbeat 이벤트
+        Flux<LastChatVo> lastChatMessages = lastChatVo.mergeWith(heartbeat)
+            .doOnSubscribe(sub -> log.info("last chatMessages, heartbeat"));
+        return new SuccessResponse<>(lastChatMessages);
     }
+
     @GetMapping(value = "/roomNumber/{roomNumber}/title")
     @Operation(summary = "채팅방 제목", description = "채팅방 상단의 제목")
     public SuccessResponse<ChatRoomTitleResponseVo> chatRoomTitle(@PathVariable(value = "roomNumber") String roomNumber,

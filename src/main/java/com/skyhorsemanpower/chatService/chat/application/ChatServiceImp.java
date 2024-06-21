@@ -122,9 +122,13 @@ public class ChatServiceImp implements ChatService {
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
         // 채팅방의 회원인지 확인
         verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
+        if(sendChatRequestDto.getContent().isEmpty()) {
+            log.info("빈 채팅");
+        } else {
+            // 채팅 저장
+            saveChatMessage(sendChatRequestDto, uuid);
+        }
 
-        // 채팅 저장
-        saveChatMessage(sendChatRequestDto, uuid);
     }
 
     private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
@@ -139,13 +143,19 @@ public class ChatServiceImp implements ChatService {
 
     private void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
         log.info("saveChatMessage 시작");
-        Chat chat = Chat.builder()
-            .senderUuid(uuid)
-            .content(sendChatRequestDto.getContent())
-            .roomNumber(sendChatRequestDto.getRoomNumber())
-            .createdAt(LocalDateTime.now())
-            .build();
-        chatRepository.save(chat).subscribe();
+        try {
+            Chat chat = Chat.builder()
+                .senderUuid(uuid)
+                .content(sendChatRequestDto.getContent())
+                .roomNumber(sendChatRequestDto.getRoomNumber())
+                .createdAt(LocalDateTime.now())
+                .build();
+            chatRepository.save(chat).subscribe();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
+        }
+
     }
 
     @Override
@@ -181,9 +191,7 @@ public class ChatServiceImp implements ChatService {
         log.info("memberUuid로 채팅방 리스트 찾기: {}", uuid);
         // uuid로 채팅방 목록 조회
         List<ChatRoom> chatRooms = chatRoomRepository.findAllByChatRoomMembers_MemberUuid(uuid);
-        if (chatRooms.isEmpty()) {
-            throw new CustomException(ResponseStatus.NO_DATA);
-        }
+
         // vo에 담아서 반환
         List<ChatRoomResponseVo> chatRoomResponseVos = new ArrayList<>();
         for(ChatRoom chatRoom : chatRooms) {
