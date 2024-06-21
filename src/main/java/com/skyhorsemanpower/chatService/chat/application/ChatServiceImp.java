@@ -139,13 +139,19 @@ public class ChatServiceImp implements ChatService {
 
     private void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
         log.info("saveChatMessage 시작");
-        Chat chat = Chat.builder()
-            .senderUuid(uuid)
-            .content(sendChatRequestDto.getContent())
-            .roomNumber(sendChatRequestDto.getRoomNumber())
-            .createdAt(LocalDateTime.now())
-            .build();
-        chatRepository.save(chat).subscribe();
+        try {
+            Chat chat = Chat.builder()
+                .senderUuid(uuid)
+                .content(sendChatRequestDto.getContent())
+                .roomNumber(sendChatRequestDto.getRoomNumber())
+                .createdAt(LocalDateTime.now())
+                .build();
+            chatRepository.save(chat).subscribe();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
+        }
+
     }
 
     @Override
