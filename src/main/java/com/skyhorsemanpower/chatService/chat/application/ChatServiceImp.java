@@ -9,6 +9,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.BeforeChatRoomVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
@@ -68,17 +69,13 @@ public class ChatServiceImp implements ChatService {
     private final AuctionPostClient auctionPostClient;
 
     @Override
-    public void createChatRoom(ExtractAuctionInformationWithMemberUuidsDto extractAuctionInformationWithMemberUuidsDto) {
-
-//        if (chatMemberDtos.size() < 2) {
-//            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
-//        }
+    public void createChatRoom(BeforeChatRoomDto beforeChatRoomDto) {
 
         try {
             String roomNumber = UUID.randomUUID().toString();
 
             // 채팅방 회원 만들기
-            List<ChatRoomMember> chatRoomMembers = extractAuctionInformationWithMemberUuidsDto
+            List<ChatRoomMember> chatRoomMembers = beforeChatRoomDto
                 .getMemberUuids().stream().map(dto -> {
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
@@ -100,8 +97,8 @@ public class ChatServiceImp implements ChatService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .chatRoomMembers(chatRoomMembers)
-                .title(extractAuctionInformationWithMemberUuidsDto.getTitle()+" 공지방")
-                .thumbnail(extractAuctionInformationWithMemberUuidsDto.getThumbnail())
+                .title(beforeChatRoomDto.getTitle()+" 공지방")
+                .thumbnail(beforeChatRoomDto.getThumbnail())
                 .build();
 
             chatRoomRepository.save(chatRoom);
@@ -109,9 +106,9 @@ public class ChatServiceImp implements ChatService {
 
             // 관리자 채팅방 저장
             ChatRoomMember admin = ChatRoomMember.builder()
-                .memberUuid(extractAuctionInformationWithMemberUuidsDto.getAdminUuid())
+                .memberUuid(beforeChatRoomDto.getAdminUuid())
                 .memberHandle("관리자")
-                .memberProfileImage(extractAuctionInformationWithMemberUuidsDto.getThumbnail())
+                .memberProfileImage(beforeChatRoomDto.getThumbnail())
                 .roomNumber(roomNumber)
                 .lastReadTime(LocalDateTime.now())
                 .build();
@@ -376,14 +373,4 @@ public class ChatServiceImp implements ChatService {
                     .build();
             });
     }
-
-    @Override
-    public void convertToChatRoomData(BeforeChatRoomDto beforeChatRoomDto) {
-        log.info("convertToChatRoomData 실행");
-        AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient.getAuctionInfo(beforeChatRoomDto.getAuctionUuid());
-        ExtractAuctionInformationWithMemberUuidsDto extractAuctionInformationWithMemberUuidsDto = auctionInfoResponseVo.toExtractAuctionInformationWithMemberUuidsDto();
-        extractAuctionInformationWithMemberUuidsDto.setMemberUuids(beforeChatRoomDto.getMemberUuids());
-        createChatRoom(extractAuctionInformationWithMemberUuidsDto);
-    }
-
 }

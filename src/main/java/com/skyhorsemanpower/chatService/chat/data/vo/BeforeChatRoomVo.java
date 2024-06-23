@@ -8,22 +8,23 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@NoArgsConstructor
 @Getter
 @ToString
+@Builder
 public class BeforeChatRoomVo {
     private String auctionUuid;
+    private String title;
     private List<String> memberUuids;
-    @Builder
-    public BeforeChatRoomVo(String auctionUuid, List<String> memberUuids) {
-        this.auctionUuid = auctionUuid;
-        this.memberUuids = memberUuids;
-    }
+    private String thumbnail;
+    private String adminUuid;
 
     public BeforeChatRoomDto toBeforeChatRoomDto() {
         return BeforeChatRoomDto.builder()
             .auctionUuid(this.auctionUuid)
+            .title(this.title)
+            .thumbnail(this.thumbnail)
             .memberUuids(this.memberUuids)
+            .adminUuid(this.adminUuid)
             .build();
     }
 }
