@@ -6,11 +6,10 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ServerPathEnum {
-    MEMBER_SERVER("http://52.79.127.196:8000/member-service"),
-    GET_MEMBER_INFO("/api/v1/non-authorization/users/datarequest/with-uuid");
+    GET_MEMBER_INFO("${get_member_info}");
     private final String server;
     public static class Constant {
-        public static final String AUCTION_POST_SERVER = "http://52.79.127.196:8000/auctionpost-service";
-        public static final String AUCTION_INFO = "/api/v1/auction-post/{auctionUuid}/chat";
+        public static final String AUCTION_POST_SERVER = "${auction_post_server}";
+        public static final String AUCTION_INFO = "${auction_info}";
     }
 }
