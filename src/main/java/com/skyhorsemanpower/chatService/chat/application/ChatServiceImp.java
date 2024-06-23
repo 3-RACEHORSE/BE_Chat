@@ -1,14 +1,17 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.model.changestream.OperationType;
+import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
+import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.BeforeChatRoomVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
@@ -22,6 +25,7 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomMemberRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
+import com.skyhorsemanpower.chatService.common.AuctionPostClient;
 import com.skyhorsemanpower.chatService.common.RandomHandleGenerator;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
@@ -48,6 +52,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -64,26 +69,23 @@ public class ChatServiceImp implements ChatService {
     private final RedisTemplate<String, String> redisTemplate;
     private final ReactiveMongoTemplate reactiveMongoTemplate;
     private final MongoTemplate mongoTemplate;
+    private final AuctionPostClient auctionPostClient;
 
     @Override
-    public void createChatRoom(List<ChatMemberDto> chatMemberDtos) {
-
-        if (chatMemberDtos.size() < 2) {
-            throw new CustomException(ResponseStatus.NOT_ENOUGH_MEMBERS);
-        }
+    public void createChatRoom(BeforeChatRoomDto beforeChatRoomDto) {
 
         try {
             String roomNumber = UUID.randomUUID().toString();
 
-            // Create the list of ChatRoomMembers
-            List<ChatRoomMember> chatRoomMembers = chatMemberDtos.stream().map(dto -> {
-                log.info("member서비스에서 uuid로 조회하기: {}", dto.getMemberUuid());
+            // 채팅방 회원 만들기
+            List<ChatRoomMember> chatRoomMembers = beforeChatRoomDto
+                .getMemberUuids().stream().map(dto -> {
                 // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
                 String handle = RandomHandleGenerator.generateRandomWord();
                 String profile = RandomHandleGenerator.randomProfile();
                 // Todo 관리자 전용 프로필과 handle을 만들어야함 관리자 판별 기준은 uuid앞에 admin 추가
                 return ChatRoomMember.builder()
-                    .memberUuid(dto.getMemberUuid())
+                    .memberUuid(dto)
                     .memberHandle(handle)
                     // 랜덤 프로필 생성 이미지
                     .memberProfileImage(profile)
@@ -98,12 +100,23 @@ public class ChatServiceImp implements ChatService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .chatRoomMembers(chatRoomMembers)
-                .title("*** 공지방")
-                .thumbnail("https://ifh.cc/g/a3lcrS.png")
+                .title(beforeChatRoomDto.getTitle()+" 공지방")
+                .thumbnail(beforeChatRoomDto.getThumbnail())
                 .build();
 
             chatRoomRepository.save(chatRoom);
             log.info("ChatRoom 저장완료: {}", roomNumber);
+
+            // 관리자 채팅방 저장
+            ChatRoomMember admin = ChatRoomMember.builder()
+                .memberUuid(beforeChatRoomDto.getAdminUuid())
+                .memberHandle("관리자")
+                .memberProfileImage(beforeChatRoomDto.getThumbnail())
+                .roomNumber(roomNumber)
+                .lastReadTime(LocalDateTime.now())
+                .build();
+
+            chatRoomMemberRepository.save(admin);
 
             // 채팅방 회원 저장
             chatRoomMembers.forEach(chatRoomMember -> {
@@ -118,6 +131,7 @@ public class ChatServiceImp implements ChatService {
     }
 
 
+    @Transactional
     @Override
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
         // 채팅방의 회원인지 확인
@@ -141,7 +155,8 @@ public class ChatServiceImp implements ChatService {
         }
     }
 
-    private void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
+    @Transactional
+    protected void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
         log.info("saveChatMessage 시작");
         try {
             Chat chat = Chat.builder()
@@ -324,6 +339,7 @@ public class ChatServiceImp implements ChatService {
 //    }
 
     @Override
+    @Transactional
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
 //        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
 //        redisTemplate.delete(redisKey);
