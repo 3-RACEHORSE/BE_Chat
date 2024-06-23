@@ -131,8 +131,6 @@ public class ChatController {
         return new SuccessResponse<>(lastChatMessages);
     }
 
-<<<<<<< HEAD
-=======
     @GetMapping(value = "/roomNumber/{roomNumber}/title")
     @Operation(summary = "채팅방 제목", description = "채팅방 상단의 제목")
     public SuccessResponse<ChatRoomTitleResponseVo> chatRoomTitle(@PathVariable(value = "roomNumber") String roomNumber,
@@ -141,10 +139,4 @@ public class ChatController {
             ChatRoomTitleResponseDto.dtoToVo(chatService.getChatRoomTitle(uuid, roomNumber)));
     }
 
->>>>>>> a709dba7fd8e37c9d33d60613c4606c14e9b10fc
-//    @GetMapping("/test")
-//    public SuccessResponse<Object> test() {
-//        chatService.test();
-//        return new SuccessResponse<>(null);
-//    }
 }

@@ -385,8 +385,6 @@ public class ChatServiceImp implements ChatService {
                     .build();
             });
     }
-<<<<<<< HEAD
-=======
 
     @Override
     public ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber) {
@@ -398,5 +396,4 @@ public class ChatServiceImp implements ChatService {
         return chatRoomTitleResponseDto;
 
     }
->>>>>>> a709dba7fd8e37c9d33d60613c4606c14e9b10fc
 }

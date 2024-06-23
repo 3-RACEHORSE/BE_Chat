@@ -36,9 +36,5 @@ public interface ChatService {
 
     Flux<LastChatVo> getLastChat(String uuid, String roomNumber);
 
-<<<<<<< HEAD
-=======
     ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber);
-
->>>>>>> a709dba7fd8e37c9d33d60613c4606c14e9b10fc
 }
