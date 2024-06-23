@@ -4,6 +4,8 @@ import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
@@ -11,6 +13,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.BeforeChatRoomVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -133,9 +136,13 @@ public class ChatServiceImp implements ChatService {
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
         // 채팅방의 회원인지 확인
         verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
+        if(sendChatRequestDto.getContent().isEmpty()) {
+            log.info("빈 채팅");
+        } else {
+            // 채팅 저장
+            saveChatMessage(sendChatRequestDto, uuid);
+        }
 
-        // 채팅 저장
-        saveChatMessage(sendChatRequestDto, uuid);
     }
 
     private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
@@ -151,13 +158,19 @@ public class ChatServiceImp implements ChatService {
     @Transactional
     protected void saveChatMessage(SendChatRequestDto sendChatRequestDto, String uuid) {
         log.info("saveChatMessage 시작");
-        Chat chat = Chat.builder()
-            .senderUuid(uuid)
-            .content(sendChatRequestDto.getContent())
-            .roomNumber(sendChatRequestDto.getRoomNumber())
-            .createdAt(LocalDateTime.now())
-            .build();
-        chatRepository.save(chat).subscribe();
+        try {
+            Chat chat = Chat.builder()
+                .senderUuid(uuid)
+                .content(sendChatRequestDto.getContent())
+                .roomNumber(sendChatRequestDto.getRoomNumber())
+                .createdAt(LocalDateTime.now())
+                .build();
+            chatRepository.save(chat).subscribe();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new CustomException(ResponseStatus.SAVE_CHAT_FAILED);
+        }
+
     }
 
     @Override
@@ -193,9 +206,7 @@ public class ChatServiceImp implements ChatService {
         log.info("memberUuid로 채팅방 리스트 찾기: {}", uuid);
         // uuid로 채팅방 목록 조회
         List<ChatRoom> chatRooms = chatRoomRepository.findAllByChatRoomMembers_MemberUuid(uuid);
-        if (chatRooms.isEmpty()) {
-            throw new CustomException(ResponseStatus.NO_DATA);
-        }
+
         // vo에 담아서 반환
         List<ChatRoomResponseVo> chatRoomResponseVos = new ArrayList<>();
         for(ChatRoom chatRoom : chatRooms) {
@@ -232,6 +243,7 @@ public class ChatServiceImp implements ChatService {
                             .orElse(null);
 
                         return PreviousChatWithMemberInfoDto.builder()
+                            .uuid(chatDto.getSenderUuid())
                             .handle(handle)
                             .profileImage(profileImage)
                             .content(chatDto.getContent())
@@ -372,5 +384,16 @@ public class ChatServiceImp implements ChatService {
                     .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(), ZoneId.systemDefault()))
                     .build();
             });
+    }
+
+    @Override
+    public ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber) {
+        ChatRoom chatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(roomNumber, uuid)
+            .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+        ChatRoomTitleResponseDto chatRoomTitleResponseDto = ChatRoomTitleResponseDto.builder()
+            .title(chatRoom.getTitle())
+            .build();
+        return chatRoomTitleResponseDto;
+
     }
 }

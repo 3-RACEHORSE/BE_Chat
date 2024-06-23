@@ -13,4 +13,8 @@ public class LastChatVo {
         this.content = content;
         this.createdAt = createdAt;
     }
+
+    public LastChatVo() {
+
+    }
 }
