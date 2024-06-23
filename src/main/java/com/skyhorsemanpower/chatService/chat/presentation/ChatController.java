@@ -2,10 +2,12 @@ package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -15,6 +17,7 @@ import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +75,7 @@ public class ChatController {
         @PathVariable(value = "roomNumber") String roomNumber,
         @RequestParam LocalDateTime enterTime,
         @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size) {
+        @RequestParam(defaultValue = "40") int size) {
         log.info("roomNumber: {}", roomNumber);
         PreviousChatResponseVo previousChatResponseVo = chatService.getPreviousChat(roomNumber, enterTime, page, size);
         return new SuccessResponse<>(previousChatResponseVo);
@@ -83,16 +86,18 @@ public class ChatController {
     public Flux<GetChatVo> getChat(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         log.info("getChat 실행: roomNumber={}, uuid={}", roomNumber, uuid);
-        return chatService.getChat(roomNumber, uuid);
-    }
 
-//    @GetMapping(value = "/readCount/{roomNumber}")
-//    @Operation(summary = "안읽은 채팅 갯수 표시", description = "채팅방 리스트에서 안읽은 채팅 갯수를 표시")
-//    public SuccessResponse<Integer> unReadChatCount(@PathVariable(value = "roomNumber") String roomNumber,
-//        @RequestHeader String uuid) {
-//        int count = chatService.getUnreadChatCount(roomNumber, uuid);
-//        return new SuccessResponse<>(count);
-//    }
+        // 채팅 메시지
+        Flux<GetChatVo> chatMessages = chatService.getChat(roomNumber, uuid);
+
+        // heartbeatTimeout 설정: 1일
+        Flux<GetChatVo> heartbeat = Flux.interval(Duration.ofDays(1))
+            .map(tick -> new GetChatVo());
+
+        // 결합된 스트림: 메시지와 하트비트
+        return chatMessages.mergeWith(heartbeat)
+            .doOnSubscribe(sub -> log.info("message, heartbeat"));
+    }
 
     @PutMapping("/leaveChatRoom")
     @Operation(summary = "입장정보 삭제", description = "검색한 곳에서 상태가 바뀌면 beforeUnload를 실행시키고\n\n"
@@ -116,9 +121,27 @@ public class ChatController {
     public SuccessResponse<Flux<LastChatVo>> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
-        return new SuccessResponse<>(lastChatVo);
+        // Heartbeat 스트림
+        Flux<LastChatVo> heartbeat = Flux.interval(Duration.ofDays(1))
+            .map(tick -> new LastChatVo());
+
+        // 결합된 스트림: 실제 메시지와 heartbeat 이벤트
+        Flux<LastChatVo> lastChatMessages = lastChatVo.mergeWith(heartbeat)
+            .doOnSubscribe(sub -> log.info("last chatMessages, heartbeat"));
+        return new SuccessResponse<>(lastChatMessages);
     }
 
+<<<<<<< HEAD
+=======
+    @GetMapping(value = "/roomNumber/{roomNumber}/title")
+    @Operation(summary = "채팅방 제목", description = "채팅방 상단의 제목")
+    public SuccessResponse<ChatRoomTitleResponseVo> chatRoomTitle(@PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        return new SuccessResponse<>(
+            ChatRoomTitleResponseDto.dtoToVo(chatService.getChatRoomTitle(uuid, roomNumber)));
+    }
+
+>>>>>>> a709dba7fd8e37c9d33d60613c4606c14e9b10fc
 //    @GetMapping("/test")
 //    public SuccessResponse<Object> test() {
 //        chatService.test();

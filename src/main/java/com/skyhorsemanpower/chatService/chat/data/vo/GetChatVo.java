@@ -21,4 +21,7 @@ public class GetChatVo {
         this.handle = handle;
         this.profileImage = profileImage;
     }
+
+    public GetChatVo() {
+    }
 }
