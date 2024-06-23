@@ -9,8 +9,6 @@ spring:
   cloud:
     config:
       profile: ${PROFILE}
-  kafka:
-    consumer:
-      group-id: payment-consumer
+
 encrypt:
   key: ${ENCRYPT_KEY}

@@ -119,9 +119,9 @@ public class ChatController {
         return new SuccessResponse<>(lastChatVo);
     }
 
-    @GetMapping("/test")
-    public SuccessResponse<Object> test() {
-        chatService.test();
-        return new SuccessResponse<>(null);
-    }
+//    @GetMapping("/test")
+//    public SuccessResponse<Object> test() {
+//        chatService.test();
+//        return new SuccessResponse<>(null);
+//    }
 }

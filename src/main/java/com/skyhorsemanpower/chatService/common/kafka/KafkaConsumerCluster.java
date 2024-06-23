@@ -17,21 +17,9 @@ import org.springframework.stereotype.Component;
 public class KafkaConsumerCluster {
 
     private final ChatService chatService;
-//    @KafkaListener(topics = "auction-close-topic", groupId = "${spring.kafka.consumer.group-id}")
-//    public void consumeAuction(@Payload LinkedHashMap<String, Object> message,
-//        @Headers MessageHeaders messageHeaders) {
-//        log.info("consumer: success >>> message: {}, headers: {}", message.toString(),
-//            messageHeaders);
-//        //message를 PaymentReadyVo로 변환
-//        BeforeChatRoomVo beforeChatRoomVo = BeforeChatRoomVo.builder()
-//            .auctionUuid(message.get("auctionUuid").toString())
-//            .memberUuids((List<String>) message.get("memberUuids"))
-//            .build();
-//        log.info("auctionUuid : {}", beforeChatRoomVo.getAuctionUuid());
-//        log.info("memberUuids : {}", beforeChatRoomVo.getMemberUuids());
-//        chatService.convertToChatRoomData(beforeChatRoomVo.toBeforeChatRoomDto());
-//    }
-    @KafkaListener(topics = "payment-close-topic", groupId = "${spring.kafka.consumer.group-id}")
+
+    @KafkaListener(topics = "send-to-chat-topic"
+    )
     public void consumePayment(@Payload LinkedHashMap<String, Object> message,
         @Headers MessageHeaders messageHeaders) {
         log.info("consumer: success >>> message: {}, headers: {}", message.toString(),
@@ -39,10 +27,14 @@ public class KafkaConsumerCluster {
         //message를 PaymentReadyVo로 변환
         BeforeChatRoomVo beforeChatRoomVo = BeforeChatRoomVo.builder()
             .auctionUuid(message.get("auctionUuid").toString())
+            .title(message.get("title").toString())
+            .thumbnail(message.get("thumbnail").toString())
             .memberUuids((List<String>) message.get("memberUuids"))
             .build();
         log.info("auctionUuid : {}", beforeChatRoomVo.getAuctionUuid());
+        log.info("title : {}", beforeChatRoomVo.getTitle());
+        log.info("thumbnail : {}", beforeChatRoomVo.getThumbnail());
         log.info("memberUuids : {}", beforeChatRoomVo.getMemberUuids());
-        chatService.convertToChatRoomData(beforeChatRoomVo.toBeforeChatRoomDto());
+        chatService.createChatRoom(beforeChatRoomVo.toBeforeChatRoomDto());
     }
 }
