@@ -1,15 +1,16 @@
 package com.skyhorsemanpower.chatService.review.application;
 
+import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
+import com.skyhorsemanpower.chatService.common.AuctionPostClient;
+import com.skyhorsemanpower.chatService.common.MemberPostClient;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
-import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
-import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;
+import com.skyhorsemanpower.chatService.review.data.dto.ReviewResponseDto;
+import com.skyhorsemanpower.chatService.review.data.dto.MemberInfoResponseDto;
 import com.skyhorsemanpower.chatService.review.domain.Review;
 import com.skyhorsemanpower.chatService.review.infrastructure.ReviewRepository;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,13 +18,26 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ReviewServiceImp implements ReviewService{
+public class ReviewServiceImp implements ReviewService {
+
     private final ReviewRepository reviewRepository;
+    private final AuctionPostClient auctionPostClient;
+    private final MemberPostClient memberPostClient;
+
     @Override
-    public void createReview(CreateReviewDto createReviewDto) {
+    public void createReview(CreateReviewDto createReviewDto, String authorization) {
         try {
+            AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient
+                .getAuctionInfo(createReviewDto.getAuctionUuid(),
+                    createReviewDto.getReviewWriterUuid(), authorization);
+            MemberInfoResponseDto memberInfoResponseDto = memberPostClient.getMemberInfo(
+                createReviewDto.getReviewWriterUuid(), authorization);
+            // Todo 해당 회원이 경매 낙찰자인지 검증하는게 필요
             Review review = Review.builder()
                 .reviewWriterUuid(createReviewDto.getReviewWriterUuid())
+                .reviewWriterName(memberInfoResponseDto.getName())
+                .influencerUuid(auctionInfoResponseVo.getInfluencerUuid())
+                .influencerName(auctionInfoResponseVo.getInfluencerName())
                 .auctionUuid(createReviewDto.getAuctionUuid())
                 .reviewContent(createReviewDto.getReviewContent())
                 .reviewRate(createReviewDto.getReviewRate())
@@ -35,40 +49,41 @@ public class ReviewServiceImp implements ReviewService{
     }
 
     @Override
-    public SearchAuctionReviewResponseVo searchAuctionReview(String auctionUuid) {
-        // Todo 판매자 정보에서 조회하는 것이라 판매자의 uuid로 경매 uuid를 조회하는 것을 실행하고 리뷰 담기
-        Optional<Review> optionalReview = reviewRepository.findByAuctionUuid(auctionUuid);
-        if(optionalReview.isPresent()) {
-            return SearchAuctionReviewResponseVo.builder()
-                //Todo 나중에 uuid로 핸들을 조회해서 builder안에 uuid대신 handle과 프로필 사진을 담는 과정 추가
-                .reviewWriterUuid(optionalReview.get().getReviewWriterUuid())
-                //현재는 리뷰작성자 uuid를 담지만 수정 예정
-                .reviewContent(optionalReview.get().getReviewContent())
-                .reviewRate(optionalReview.get().getReviewRate())
-                .build();
-        } else {
-            throw new CustomException(ResponseStatus.WRONG_REQUEST);
+    public List<ReviewResponseDto> searchInfluencerReview(String influencerUuid) {
+        try {
+            List<Review> reviews = reviewRepository.findAllByInfluencerUuid(influencerUuid);
+
+            return reviews.stream()
+                .map(review -> ReviewResponseDto.builder()
+                    .reviewWriterUuid(review.getReviewWriterUuid())
+                    .reviewWriterName(review.getReviewWriterName())
+                    .influencerUuid(review.getInfluencerUuid())
+                    .influencerName(review.getInfluencerName())
+                    .reviewContent(review.getReviewContent())
+                    .reviewRate(review.getReviewRate())
+                    .build())
+                .toList();
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
         }
     }
 
     @Override
-    public List<SearchReviewWriterReviewResponseVo> searchReviewWriterReview(String reviewWriterUuid) {
-        List<Review> reviews = reviewRepository.findAllByReviewWriterUuid(reviewWriterUuid);
-        List<SearchReviewWriterReviewResponseVo> searchReviewWriterReviewResponseVos = new ArrayList<>();
-        if (!reviews.isEmpty()){
-            for (Review review : reviews) {
-                SearchReviewWriterReviewResponseVo responseVo = SearchReviewWriterReviewResponseVo.builder()
-                    //Todo 현재 경매 uuid로 조회할수 없는데 경매uuid로 조회해서 제목과 필요한 값들을 넣기
-                    .auctionUuid(review.getAuctionUuid())
+    public List<ReviewResponseDto> searchReviewWriterReview(String reviewWriterUuid) {
+        try {
+            List<Review> reviews = reviewRepository.findAllByReviewWriterUuid(reviewWriterUuid);
+            return reviews.stream()
+                .map(review -> ReviewResponseDto.builder()
+                    .reviewWriterUuid(review.getReviewWriterUuid())
+                    .reviewWriterName(review.getReviewWriterName())
+                    .influencerUuid(review.getInfluencerUuid())
+                    .influencerName(review.getInfluencerName())
                     .reviewContent(review.getReviewContent())
                     .reviewRate(review.getReviewRate())
-                    .build();
-                searchReviewWriterReviewResponseVos.add(responseVo);
-            }
-        } else {
-            throw new CustomException(ResponseStatus.NO_DATA);
+                    .build())
+                .toList();
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
         }
-
-        return searchReviewWriterReviewResponseVos;
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ReviewRepository extends MongoRepository<Review, String> {
 
-    Optional<Review> findByAuctionUuid(String auctionUuid);
+    List<Review> findAllByInfluencerUuid(String influencerUuid);
 
     List<Review> findAllByReviewWriterUuid(String reviewWriterUuid);
 }
