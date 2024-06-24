@@ -1,20 +1,18 @@
 package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
-import com.skyhorsemanpower.chatService.chat.data.vo.AddChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
+import com.skyhorsemanpower.chatService.common.response.CustomException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Duration;
@@ -34,7 +32,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Sinks;
 
 @RequiredArgsConstructor
 @RestController
@@ -44,15 +41,6 @@ import reactor.core.publisher.Sinks;
 @Slf4j
 public class ChatController {
     private final ChatService chatService;
-    private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
-
-//    @PostMapping("/room")
-//    @Operation(summary = "채팅방 생성", description = "낙찰된 사용자와 판매자 사이의 채팅방을 생성")
-//    public SuccessResponse<Object> addChatRoom(@RequestBody AddChatRoomRequestVo addChatRoomRequestVo) {
-//        List<ChatMemberDto> chatMemberDtos = addChatRoomRequestVo.toChatMemberDto();
-//        chatService.createChatRoom(chatMemberDtos);
-//        return new SuccessResponse<>(null);
-//    }
 
     @PostMapping
     @Operation(summary = "채팅 메시지 전송", description = "채팅방 안에서 사용자가 채팅을 보내기")
@@ -95,8 +83,9 @@ public class ChatController {
             .map(tick -> new GetChatVo());
 
         // 결합된 스트림: 메시지와 하트비트
-        return chatMessages.mergeWith(heartbeat)
-            .doOnSubscribe(sub -> log.info("message, heartbeat"));
+        return chatMessages.mergeWith(heartbeat).timeout(Duration.ofHours(1))
+            .doOnSubscribe(sub -> log.info("message, heartbeat"))
+            .doOnError(error -> log.error("에러 발생: {}", error.getMessage()));
     }
 
     @PutMapping("/leaveChatRoom")
@@ -126,8 +115,9 @@ public class ChatController {
             .map(tick -> new LastChatVo());
 
         // 결합된 스트림: 실제 메시지와 heartbeat 이벤트
-        Flux<LastChatVo> lastChatMessages = lastChatVo.mergeWith(heartbeat)
-            .doOnSubscribe(sub -> log.info("last chatMessages, heartbeat"));
+        Flux<LastChatVo> lastChatMessages = lastChatVo.mergeWith(heartbeat).timeout(Duration.ofHours(1))
+            .doOnSubscribe(sub -> log.info("last chatMessages, heartbeat"))
+            .doOnError(error -> log.error("에러 발생: {}", error.getMessage()));;
         return new SuccessResponse<>(lastChatMessages);
     }
 
