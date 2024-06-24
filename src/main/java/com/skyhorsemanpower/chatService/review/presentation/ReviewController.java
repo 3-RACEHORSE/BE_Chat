@@ -63,11 +63,4 @@ public class ReviewController {
             .map(ReviewResponseDto::dtoToVo).toList());
     }
 
-    @GetMapping(value = "/test/{auction_uuid}")
-    public SuccessResponse<AuctionInfoResponseVo> test(
-        @PathVariable(value = "auction_uuid") String auctionUuid,
-        @RequestHeader String uuid, @RequestHeader String authorization) {
-        AuctionInfoResponseVo auctionInfoResponseVo = auctionPostClient.getAuctionInfo(auctionUuid, uuid, authorization);
-        return new SuccessResponse<>(auctionInfoResponseVo);
-    }
 }
