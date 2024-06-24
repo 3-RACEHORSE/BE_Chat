@@ -1,14 +1,15 @@
 package com.skyhorsemanpower.chatService.review.application;
 
 import com.skyhorsemanpower.chatService.review.data.dto.CreateReviewDto;
-import com.skyhorsemanpower.chatService.review.data.vo.SearchAuctionReviewResponseVo;
+import com.skyhorsemanpower.chatService.review.data.dto.ReviewResponseDto;
+import com.skyhorsemanpower.chatService.review.data.vo.ReviewResponseVo;
 import com.skyhorsemanpower.chatService.review.data.vo.SearchReviewWriterReviewResponseVo;
 import java.util.List;
 
 public interface ReviewService {
-    void createReview(CreateReviewDto createReviewDto);
+    void createReview(CreateReviewDto createReviewDto, String authorization);
 
-    SearchAuctionReviewResponseVo searchAuctionReview(String auctionUuid);
+    List<ReviewResponseDto> searchInfluencerReview(String influencerUuid);
 
-    List<SearchReviewWriterReviewResponseVo> searchReviewWriterReview(String reviewWriterUuid);
+    List<ReviewResponseDto> searchReviewWriterReview(String reviewWriterUuid);
 }
