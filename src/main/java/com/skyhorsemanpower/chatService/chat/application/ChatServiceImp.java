@@ -2,13 +2,14 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.SendToAlarmDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
+import com.skyhorsemanpower.chatService.chat.data.dto.SendToAlarmDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
@@ -333,13 +334,39 @@ public class ChatServiceImp implements ChatService {
 
     }
 
+    @Override // 프로필 이미지 업데이트
+    public void updateProfileImage(UpdateProfileImageRequestDto updateProfileImageRequestDto) {
+        List<ChatRoomMember> chatRoomMembers =
+            chatRoomMemberRepository.
+                findAllByMemberUuid(updateProfileImageRequestDto.getMemberUuid());
+
+        if (chatRoomMembers.isEmpty()) {
+            throw new CustomException(ResponseStatus.NO_DATA);
+        } else {
+
+            try {
+                mongoTemplate.updateMulti(
+                    Query.query(
+                        Criteria.where("memberUuid")
+                            .is(updateProfileImageRequestDto.getMemberUuid())),
+                    Update.update("memberProfileImage",
+                        updateProfileImageRequestDto.getProfileImage()),
+                    ChatRoomMember.class);
+            } catch (Exception e) {
+                log.error("오류 발생 : {}", e.getMessage());
+                throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+            }
+        }
+    }
+
     private void sendToAlarm(BeforeChatRoomDto beforeChatRoomDto) {
 //         log.info("alarmDto에 들어갈 receiverUuids: {}", beforeChatRoomDto.getMemberUuidsWithProfiles().keySet().toString());
 //         log.info("alarmDto에 들어갈 message: {}", beforeChatRoomDto.getTitle());
         // 알람 서비스로 전송
         SendToAlarmDto sendToAlarmDto = SendToAlarmDto.builder()
             .eventType("chat")
-            .receiverUuids(new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
+            .receiverUuids(
+                new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
             .message(beforeChatRoomDto.getTitle() + " 채팅방이 열렸습니다.")
             .build();
         producer.sendMessage("alarm-topic", sendToAlarmDto);

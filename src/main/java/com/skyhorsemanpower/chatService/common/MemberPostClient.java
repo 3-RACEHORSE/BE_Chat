@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(name = "memberPostClient", url = Constant.MEMBER_SERVER)
 public interface MemberPostClient {
+
     @GetMapping(Constant.MEMBER_INFO)
-    MemberInfoResponseDto getMemberInfo(@RequestHeader String uuid, @RequestHeader String authorization);
+    MemberInfoResponseDto getMemberInfo(@RequestHeader String uuid,
+        @RequestHeader String authorization);
+
 }
