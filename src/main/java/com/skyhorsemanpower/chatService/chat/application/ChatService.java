@@ -1,18 +1,14 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
-import com.skyhorsemanpower.chatService.chat.data.vo.BeforeChatRoomVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
-import com.skyhorsemanpower.chatService.chat.domain.ChatRoom;
 import java.time.LocalDateTime;
 import java.util.List;
 import reactor.core.publisher.Flux;
@@ -37,4 +33,6 @@ public interface ChatService {
     Flux<LastChatVo> getLastChat(String uuid, String roomNumber);
 
     ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber);
+
+    void updateProfileImage(UpdateProfileImageRequestDto updateProfileImageRequestDto);
 }
