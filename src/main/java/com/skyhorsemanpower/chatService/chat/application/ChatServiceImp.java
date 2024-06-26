@@ -2,18 +2,13 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
-import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.BeforeChatRoomVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
@@ -395,5 +390,30 @@ public class ChatServiceImp implements ChatService {
             .build();
         return chatRoomTitleResponseDto;
 
+    }
+
+    @Override // 프로필 이미지 업데이트
+    public void updateProfileImage(UpdateProfileImageRequestDto updateProfileImageRequestDto) {
+        List<ChatRoomMember> chatRoomMembers =
+            chatRoomMemberRepository.
+                findAllByMemberUuid(updateProfileImageRequestDto.getMemberUuid());
+
+        if (chatRoomMembers.isEmpty()) {
+            throw new CustomException(ResponseStatus.NO_DATA);
+        } else {
+
+            try {
+                mongoTemplate.updateMulti(
+                    Query.query(
+                        Criteria.where("memberUuid")
+                            .is(updateProfileImageRequestDto.getMemberUuid())),
+                    Update.update("memberProfileImage",
+                        updateProfileImageRequestDto.getProfileImage()),
+                    ChatRoomMember.class);
+            } catch (Exception e) {
+                log.error("오류 발생 : {}", e.getMessage());
+                throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+            }
+        }
     }
 }
