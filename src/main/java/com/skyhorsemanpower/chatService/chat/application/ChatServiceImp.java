@@ -56,6 +56,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 @Slf4j
 public class ChatServiceImp implements ChatService {
+
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
@@ -73,7 +74,8 @@ public class ChatServiceImp implements ChatService {
             String roomNumber = UUID.randomUUID().toString();
 
             // 채팅방 회원 만들기
-            List<ChatRoomMember> chatRoomMembers = beforeChatRoomDto.getMemberUuidsWithProfiles().entrySet().stream()
+            List<ChatRoomMember> chatRoomMembers = beforeChatRoomDto.getMemberUuidsWithProfiles()
+                .entrySet().stream()
                 .map(entry -> {
                     String memberUuid = entry.getKey();
                     String profileImage = entry.getValue();
@@ -119,18 +121,7 @@ public class ChatServiceImp implements ChatService {
                 chatRoomMemberRepository.save(chatRoomMember);
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
             });
-
-            log.info("alarmDto에 들어갈 receiverUuids: {}", beforeChatRoomDto.getMemberUuidsWithProfiles().keySet().toString());
-            log.info("alarmDto에 들어갈 message: {}", beforeChatRoomDto.getTitle());
-            // 알람 서비스로 전송
-            SendToAlarmDto sendToAlarmDto = SendToAlarmDto.builder()
-                .eventType("chat")
-                .receiverUuids(new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
-                .message(beforeChatRoomDto.getTitle() + " 채팅방이 열렸습니다.")
-                .build();
-            producer.sendMessage("alarm-topic", sendToAlarmDto);
-            log.info("알람 서비스로 전송: {}", sendToAlarmDto.toString());
-
+            sendToAlarm(beforeChatRoomDto);
         } catch (Exception e) {
             log.error("채팅 방 생성중 오류 발생: {}", e.getMessage());
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
@@ -138,14 +129,12 @@ public class ChatServiceImp implements ChatService {
     }
 
 
-
-
     @Transactional
     @Override
     public void sendChat(SendChatRequestDto sendChatRequestDto, String uuid) {
         // 채팅방의 회원인지 확인
         verifyChatRoomAndMemberExistence(sendChatRequestDto, uuid);
-        if(sendChatRequestDto.getContent().isEmpty()) {
+        if (sendChatRequestDto.getContent().isEmpty()) {
             log.info("빈 채팅");
         } else {
             // 채팅 저장
@@ -154,11 +143,12 @@ public class ChatServiceImp implements ChatService {
 
     }
 
-    private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto, String uuid) {
+    private void verifyChatRoomAndMemberExistence(SendChatRequestDto sendChatRequestDto,
+        String uuid) {
         // chatRoom에 조회
         boolean isMemberInChatRoom = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
             uuid, sendChatRequestDto.getRoomNumber()).isPresent();
-        log.info("isMemberInChatRoom : {}",isMemberInChatRoom);
+        log.info("isMemberInChatRoom : {}", isMemberInChatRoom);
         if (!isMemberInChatRoom) {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
@@ -185,7 +175,8 @@ public class ChatServiceImp implements ChatService {
     @Override
     public Flux<GetChatVo> getChat(String roomNumber, String uuid) {
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberUuidAndRoomNumber(
-            uuid, roomNumber).orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+                uuid, roomNumber)
+            .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -193,8 +184,10 @@ public class ChatServiceImp implements ChatService {
                 roomNumber, now)
             .flatMap(chatVo -> {
                 String senderUuid = chatVo.getSenderUuid();
-                return Mono.justOrEmpty(chatRoomMemberRepository.findByMemberUuidAndRoomNumber(senderUuid, roomNumber))
-                    .switchIfEmpty(Mono.error(new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER)))
+                return Mono.justOrEmpty(
+                        chatRoomMemberRepository.findByMemberUuidAndRoomNumber(senderUuid, roomNumber))
+                    .switchIfEmpty(
+                        Mono.error(new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER)))
                     .map(sender -> {
                         GetChatVo getChatVo = GetChatVo.builder()
                             .uuid(senderUuid)
@@ -209,7 +202,6 @@ public class ChatServiceImp implements ChatService {
     }
 
 
-
     @Override
     public List<ChatRoomResponseVo> getChatRoomsByUuid(String uuid) {
         log.info("memberUuid로 채팅방 리스트 찾기: {}", uuid);
@@ -218,7 +210,7 @@ public class ChatServiceImp implements ChatService {
 
         // vo에 담아서 반환
         List<ChatRoomResponseVo> chatRoomResponseVos = new ArrayList<>();
-        for(ChatRoom chatRoom : chatRooms) {
+        for (ChatRoom chatRoom : chatRooms) {
             ChatRoomResponseVo chatRoomResponseVo = ChatRoomResponseVo.builder()
                 .roomNumber(chatRoom.getRoomNumber())
                 .title(chatRoom.getTitle())
@@ -231,11 +223,13 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
-    public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime, int page, int size) {
+    public PreviousChatResponseVo getPreviousChat(String roomNumber, LocalDateTime enterTime,
+        int page, int size) {
         // 페이징에 담기
         Pageable pageable = PageRequest.of(page, size);
-        Page<PreviousChatDto> previousChat = chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(roomNumber, enterTime, pageable);
-        if(previousChat.getSize() == 0){
+        Page<PreviousChatDto> previousChat = chatSyncRepository.findByRoomNumberAndCreatedAtBeforeOrderByCreatedAtDesc(
+            roomNumber, enterTime, pageable);
+        if (previousChat.getSize() == 0) {
             throw new CustomException(ResponseStatus.NO_DATA);
         }
         Optional<ChatRoom> optChatRoom = chatRoomRepository.findByRoomNumber(roomNumber);
@@ -270,82 +264,6 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
         }
     }
-//    @Override
-//    public void enteringMember(String uuid, String roomNumber) {
-//        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
-//        log.info("otherUuid : {}", otherUuid);
-//        log.info("enteringMember 실행: roomNumber={}, uuid={}", roomNumber, uuid);
-//        try {
-//            // 데이터를 JSON 형식으로 변환
-//            ObjectMapper objectMapper = new ObjectMapper();
-//            EnteringMemberDto enteringMemberDto =
-//                EnteringMemberDto.builder()
-//                    .roomNumber(roomNumber)
-//                    .uuid(uuid)
-//                    .build();
-//            String jsonData = objectMapper.writeValueAsString(enteringMemberDto);
-//
-//            // Redis에 데이터 저장
-//            String redisKey = "room:" + roomNumber + ":member:" + uuid;
-//            redisTemplate.opsForValue().set(redisKey, jsonData);
-//
-//        } catch (Exception e) {
-//            log.error("Redis에 데이터 저장 중 오류 발생", e);
-//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
-//        }
-//    }
-//    @Override
-//    public String findOtherMemberUuid(String uuid, String roomNumber) {
-//        log.info("findOtherMemberUuid 시작: uuid={}, roomNumber={}", uuid, roomNumber);
-//
-//        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(roomNumber);
-//
-//        if (chatRoomMembers.isEmpty()) {
-//            log.error("올바르지 않은 채팅방입니다. roomNumber={}, uuid={}", roomNumber, uuid);
-//            throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-//        }
-//
-//        for (ChatRoomMember member : chatRoomMembers) {
-//            if (!member.getMemberUuid().equals(uuid)) {
-//                log.info("다른 멤버 UUID 찾음: {}", member.getMemberUuid());
-//                return member.getMemberUuid();
-//            }
-//        }
-//
-//        log.error("UUID가 채팅방에 포함되어 있지 않음: roomNumber={}, uuid={}", roomNumber, uuid);
-//        throw new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER);
-//    }
-
-//    private boolean isMemberDataExists(String uuid, String roomNumber) {
-//        try {
-//            String redisKey = "room:" + roomNumber + ":member:" + uuid;
-//            Boolean exists = redisTemplate.hasKey(redisKey);
-//
-//            if (exists != null && exists) {
-//                log.info("Redis에 데이터가 존재합니다: roomNumber={}, uuid={}", roomNumber, uuid);
-//                return true;
-//            } else {
-//                log.info("Redis에 데이터가 존재하지 않습니다: roomNumber={}, uuid={}", roomNumber, uuid);
-//                return false;
-//            }
-//        } catch (Exception e) {
-//            log.error("Redis에서 데이터 존재 여부 확인 중 오류 발생", e);
-//            throw new CustomException(ResponseStatus.REDIS_DB_ERROR);
-//        }
-//    }
-
-//    @Override
-//    public int getUnreadChatCount(String roomNumber, String uuid) {
-//        String otherUuid = findOtherMemberUuid(uuid, roomNumber);
-//        int readCount = 1;
-//        try {
-//            List<Chat> chats = chatSyncRepository.findAllByRoomNumberAndSenderUuidAndReadCount(
-//                roomNumber, otherUuid, readCount);
-//            return chats.size();
-//        } catch (Exception e) {
-//            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
-//        }
-//    }
 
     @Override
     @Transactional
@@ -353,16 +271,21 @@ public class ChatServiceImp implements ChatService {
 //        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
 //        redisTemplate.delete(redisKey);
         mongoTemplate.updateFirst(
-            Query.query(Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber").is(leaveChatRoomDto.getRoomNumber())),
+            Query.query(
+                Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber")
+                    .is(leaveChatRoomDto.getRoomNumber())),
             Update.update("lastReadTime", LocalDateTime.now()),
             ChatRoomMember.class
         );
-        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
+        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(),
+            leaveChatRoomDto.getUuid());
     }
+
     @Override
     public LastChatVo getLastChatSync(String uuid, String roomNumber) {
         // 첫 리스트 화면 출력을 위해 마지막 채팅 1개 들고익
-        Optional<Chat> optionalChat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(roomNumber);
+        Optional<Chat> optionalChat = chatSyncRepository.findFirstByRoomNumberOrderByCreatedAtDesc(
+            roomNumber);
         if (optionalChat.isPresent()) {
             return LastChatVo.builder()
                 .content(optionalChat.get().getContent())
@@ -372,13 +295,15 @@ public class ChatServiceImp implements ChatService {
             throw new CustomException(ResponseStatus.NO_DATA);
         }
     }
+
     @Override
     public Flux<LastChatVo> getLastChat(String uuid, String roomNumber) {
         log.info("실시간 마지막 채팅 들고오기: {}", roomNumber);
         ChangeStreamOptions options = ChangeStreamOptions.builder()
             // DB의 insert를 감지
             .filter(Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("operationType").is(OperationType.INSERT.getValue())),
+                Aggregation.match(
+                    Criteria.where("operationType").is(OperationType.INSERT.getValue())),
                 // roomNumber랑 일치하는지
                 Aggregation.match(Criteria.where("fullDocument.roomNumber").is(roomNumber))
             ))
@@ -390,19 +315,34 @@ public class ChatServiceImp implements ChatService {
                 log.info("검색: {}", document);
                 return LastChatVo.builder()
                     .content(document.getString("content"))
-                    .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(), ZoneId.systemDefault()))
+                    .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(),
+                        ZoneId.systemDefault()))
                     .build();
             });
     }
 
     @Override
     public ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber) {
-        ChatRoom chatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(roomNumber, uuid)
+        ChatRoom chatRoom = chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
+                roomNumber, uuid)
             .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
         ChatRoomTitleResponseDto chatRoomTitleResponseDto = ChatRoomTitleResponseDto.builder()
             .title(chatRoom.getTitle())
             .build();
         return chatRoomTitleResponseDto;
 
+    }
+
+    private void sendToAlarm(BeforeChatRoomDto beforeChatRoomDto) {
+//         log.info("alarmDto에 들어갈 receiverUuids: {}", beforeChatRoomDto.getMemberUuidsWithProfiles().keySet().toString());
+//         log.info("alarmDto에 들어갈 message: {}", beforeChatRoomDto.getTitle());
+        // 알람 서비스로 전송
+        SendToAlarmDto sendToAlarmDto = SendToAlarmDto.builder()
+            .eventType("chat")
+            .receiverUuids(new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
+            .message(beforeChatRoomDto.getTitle() + " 채팅방이 열렸습니다.")
+            .build();
+        producer.sendMessage("alarm-topic", sendToAlarmDto);
+        log.info("알람 서비스로 전송: {}", sendToAlarmDto.toString());
     }
 }
