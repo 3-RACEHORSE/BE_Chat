@@ -3,6 +3,7 @@ package com.skyhorsemanpower.chatService.chat.data.vo;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +15,7 @@ import lombok.ToString;
 public class BeforeChatRoomVo {
     private String auctionUuid;
     private String title;
-    private List<String> memberUuids;
+    private Map<String, String> memberUuidsWithProfiles;
     private String thumbnail;
     private String adminUuid;
 
@@ -23,7 +24,7 @@ public class BeforeChatRoomVo {
             .auctionUuid(this.auctionUuid)
             .title(this.title)
             .thumbnail(this.thumbnail)
-            .memberUuids(this.memberUuids)
+            .memberUuidsWithProfiles(this.memberUuidsWithProfiles)
             .adminUuid(this.adminUuid)
             .build();
     }

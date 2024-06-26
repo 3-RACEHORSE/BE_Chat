@@ -1,6 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.data.dto;
 
 import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -9,7 +10,7 @@ import lombok.Getter;
 public class BeforeChatRoomDto {
 
     private String auctionUuid;
-    private List<String> memberUuids;
+    private Map<String, String> memberUuidsWithProfiles;
     private String title;
     private String thumbnail;
     private String adminUuid;

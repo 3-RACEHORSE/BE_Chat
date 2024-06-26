@@ -2,19 +2,13 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ChatMemberDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.ExtractAuctionInformationWithMemberUuidsDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
-import com.skyhorsemanpower.chatService.chat.data.dto.EnteringMemberDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.PreviousChatWithMemberInfoDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
-import com.skyhorsemanpower.chatService.chat.data.vo.AuctionInfoResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.BeforeChatRoomVo;
+import com.skyhorsemanpower.chatService.chat.data.dto.SendToAlarmDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
-import com.skyhorsemanpower.chatService.chat.data.vo.ChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
@@ -27,6 +21,8 @@ import com.skyhorsemanpower.chatService.chat.infrastructure.ChatRoomRepository;
 import com.skyhorsemanpower.chatService.chat.infrastructure.ChatSyncRepository;
 import com.skyhorsemanpower.chatService.common.AuctionPostClient;
 import com.skyhorsemanpower.chatService.common.RandomHandleGenerator;
+import com.skyhorsemanpower.chatService.common.ServerPathEnum.Constant;
+import com.skyhorsemanpower.chatService.common.kafka.KafkaProducerCluster;
 import com.skyhorsemanpower.chatService.common.response.CustomException;
 import com.skyhorsemanpower.chatService.common.response.ResponseStatus;
 import java.time.LocalDateTime;
@@ -55,7 +51,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 
 @Service
 @RequiredArgsConstructor
@@ -65,49 +60,36 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatSyncRepository chatSyncRepository;
-    private final Sinks.Many<ChatVo> sink = Sinks.many().multicast().onBackpressureBuffer();
     private final RedisTemplate<String, String> redisTemplate;
     private final ReactiveMongoTemplate reactiveMongoTemplate;
     private final MongoTemplate mongoTemplate;
     private final AuctionPostClient auctionPostClient;
+    private final KafkaProducerCluster producer;
+
 
     @Override
     public void createChatRoom(BeforeChatRoomDto beforeChatRoomDto) {
-
         try {
             String roomNumber = UUID.randomUUID().toString();
 
             // 채팅방 회원 만들기
-            List<ChatRoomMember> chatRoomMembers = beforeChatRoomDto
-                .getMemberUuids().stream().map(dto -> {
-                // 관형사 + 동물 이름 조합으로 랜덤 핸들 생성
-                String handle = RandomHandleGenerator.generateRandomWord();
-                String profile = RandomHandleGenerator.randomProfile();
-                // Todo 관리자 전용 프로필과 handle을 만들어야함 관리자 판별 기준은 uuid앞에 admin 추가
-                return ChatRoomMember.builder()
-                    .memberUuid(dto)
-                    .memberHandle(handle)
-                    // 랜덤 프로필 생성 이미지
-                    .memberProfileImage(profile)
-                    .roomNumber(roomNumber)
-                    .lastReadTime(LocalDateTime.now())
-                    .build();
-            }).collect(Collectors.toList());
+            List<ChatRoomMember> chatRoomMembers = beforeChatRoomDto.getMemberUuidsWithProfiles().entrySet().stream()
+                .map(entry -> {
+                    String memberUuid = entry.getKey();
+                    String profileImage = entry.getValue();
+                    // 관련된 로직을 추가하여 handle을 생성하고, 회원 정보를 채팅방 회원 객체로 매핑합니다.
+                    String handle = RandomHandleGenerator.generateRandomWord();
 
-            // 채팅방 저장
-            ChatRoom chatRoom = ChatRoom.builder()
-                .roomNumber(roomNumber)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .chatRoomMembers(chatRoomMembers)
-                .title(beforeChatRoomDto.getTitle()+" 공지방")
-                .thumbnail(beforeChatRoomDto.getThumbnail())
-                .build();
+                    return ChatRoomMember.builder()
+                        .memberUuid(memberUuid)
+                        .memberHandle(handle)
+                        .memberProfileImage(profileImage)
+                        .roomNumber(roomNumber)
+                        .lastReadTime(LocalDateTime.now())
+                        .build();
+                }).collect(Collectors.toList());
 
-            chatRoomRepository.save(chatRoom);
-            log.info("ChatRoom 저장완료: {}", roomNumber);
-
-            // 관리자 채팅방 저장
+            // 관리자 채팅방 회원 객체 생성
             ChatRoomMember admin = ChatRoomMember.builder()
                 .memberUuid(beforeChatRoomDto.getAdminUuid())
                 .memberHandle("관리자")
@@ -116,7 +98,21 @@ public class ChatServiceImp implements ChatService {
                 .lastReadTime(LocalDateTime.now())
                 .build();
 
-            chatRoomMemberRepository.save(admin);
+            // 관리자 객체를 chatRoomMembers 리스트에 추가
+            chatRoomMembers.add(admin);
+
+            // 채팅방 저장
+            ChatRoom chatRoom = ChatRoom.builder()
+                .roomNumber(roomNumber)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .chatRoomMembers(chatRoomMembers)
+                .title(beforeChatRoomDto.getTitle() + " 공지방")
+                .thumbnail(beforeChatRoomDto.getThumbnail())
+                .build();
+
+            chatRoomRepository.save(chatRoom);
+            log.info("ChatRoom 저장완료: {}", roomNumber);
 
             // 채팅방 회원 저장
             chatRoomMembers.forEach(chatRoomMember -> {
@@ -124,11 +120,24 @@ public class ChatServiceImp implements ChatService {
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
             });
 
+            log.info("alarmDto에 들어갈 receiverUuids: {}", beforeChatRoomDto.getMemberUuidsWithProfiles().keySet().toString());
+            log.info("alarmDto에 들어갈 message: {}", beforeChatRoomDto.getTitle());
+            // 알람 서비스로 전송
+            SendToAlarmDto sendToAlarmDto = SendToAlarmDto.builder()
+                .eventType("chat")
+                .receiverUuids(new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
+                .message(beforeChatRoomDto.getTitle() + " 채팅방이 열렸습니다.")
+                .build();
+            producer.sendMessage("alarm-topic", sendToAlarmDto);
+            log.info("알람 서비스로 전송: {}", sendToAlarmDto.toString());
+
         } catch (Exception e) {
             log.error("채팅 방 생성중 오류 발생: {}", e.getMessage());
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
         }
     }
+
+
 
 
     @Transactional
