@@ -2,6 +2,7 @@ package com.skyhorsemanpower.chatService.chat.application;
 
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
@@ -372,4 +373,25 @@ public class ChatServiceImp implements ChatService {
         producer.sendMessage("alarm-topic", sendToAlarmDto);
         log.info("알람 서비스로 전송: {}", sendToAlarmDto.toString());
     }
+
+    @Override
+    public List<ChatRoomMemberResponseDto> getChatRoomMembers(String roomNumber) {
+        try {
+            // 조회
+            List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(
+                roomNumber);
+
+            // Dto 변환
+            return chatRoomMembers.stream()
+                .map(chatRoomMember -> ChatRoomMemberResponseDto.builder()
+                    .memberUuid(chatRoomMember.getMemberUuid())
+                    .profileImage(chatRoomMember.getMemberProfileImage())
+                    .handle(chatRoomMember.getMemberHandle())
+                    .build())
+                .toList();
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
+    }
+
 }

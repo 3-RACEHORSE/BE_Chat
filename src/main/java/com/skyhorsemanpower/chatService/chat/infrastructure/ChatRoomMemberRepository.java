@@ -10,4 +10,6 @@ public interface ChatRoomMemberRepository extends MongoRepository<ChatRoomMember
     Optional<ChatRoomMember> findByMemberUuidAndRoomNumber(String uuid, String roomNumber);
 
     List<ChatRoomMember> findAllByMemberUuid(String memberUuid);
+
+    List<ChatRoomMember> findAllByRoomNumber(String roomNumber);
 }
