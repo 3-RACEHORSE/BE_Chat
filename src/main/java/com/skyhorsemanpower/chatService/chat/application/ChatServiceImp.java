@@ -376,18 +376,22 @@ public class ChatServiceImp implements ChatService {
 
     @Override
     public List<ChatRoomMemberResponseDto> getChatRoomMembers(String roomNumber) {
-        // 조회
-        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(
-            roomNumber);
+        try {
+            // 조회
+            List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findAllByRoomNumber(
+                roomNumber);
 
-        // Dto 변환
-        return chatRoomMembers.stream()
-            .map(chatRoomMember -> ChatRoomMemberResponseDto.builder()
-                .memberUuid(chatRoomMember.getMemberUuid())
-                .profileImage(chatRoomMember.getMemberProfileImage())
-                .handle(chatRoomMember.getMemberHandle())
-                .build())
-            .toList(); // 변환된 리스트를 반환합니다.
+            // Dto 변환
+            return chatRoomMembers.stream()
+                .map(chatRoomMember -> ChatRoomMemberResponseDto.builder()
+                    .memberUuid(chatRoomMember.getMemberUuid())
+                    .profileImage(chatRoomMember.getMemberProfileImage())
+                    .handle(chatRoomMember.getMemberHandle())
+                    .build())
+                .toList();
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
     }
 
 }
