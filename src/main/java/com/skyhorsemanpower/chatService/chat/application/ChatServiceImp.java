@@ -3,6 +3,7 @@ package com.skyhorsemanpower.chatService.chat.application;
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.UnReadChatCountResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
@@ -393,6 +394,21 @@ public class ChatServiceImp implements ChatService {
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
         }
+    }
+
+    @Override
+    public UnReadChatCountResponseDto getUnreadChatCount(String roomNumber, String uuid) {
+        ChatRoomMember chatRoomMember = chatRoomMemberRepository
+            .findByMemberUuidAndRoomNumber(uuid, roomNumber)
+            .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+        // 해당 채팅방에서 uuid의 lastReadTime 이후의 채팅 개수
+        Long count = mongoTemplate.count(
+            Query.query(
+                Criteria.where("roomNumber").is(roomNumber).and("createdAt")
+                    .gt(chatRoomMember.getLastReadTime())), "chat");
+        return UnReadChatCountResponseDto.builder()
+            .count(count)
+            .build();
     }
 
 }

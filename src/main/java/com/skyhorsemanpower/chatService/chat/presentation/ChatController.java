@@ -5,6 +5,7 @@ import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.UnReadChatCountResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomMemberResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
@@ -13,6 +14,7 @@ import com.skyhorsemanpower.chatService.chat.data.vo.LastChatVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
+import com.skyhorsemanpower.chatService.chat.data.vo.UnReadChatCountResponseVo;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -141,12 +143,22 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}/member")
     @Operation(summary = "채팅방 멤버 목록", description = "채팅방 내에서 채팅방 멤버들을 표시합니다")
-    public SuccessResponse<List<ChatRoomMemberResponseVo>> chatRoomMembers(@PathVariable(value = "roomNumber") String roomNumber) {
-        List<ChatRoomMemberResponseDto> chatRoomMemberResponseDtos = chatService.getChatRoomMembers(roomNumber);
+    public SuccessResponse<List<ChatRoomMemberResponseVo>> chatRoomMembers(
+        @PathVariable(value = "roomNumber") String roomNumber) {
+        List<ChatRoomMemberResponseDto> chatRoomMemberResponseDtos = chatService.getChatRoomMembers(
+            roomNumber);
         List<ChatRoomMemberResponseVo> chatRoomMemberResponseVos = chatRoomMemberResponseDtos.stream()
             .map(ChatRoomMemberResponseDto::dtoToVo)
             .toList();
         return new SuccessResponse<>(chatRoomMemberResponseVos);
     }
 
+    @GetMapping(value = "/roomNumber/{roomNumber}/unread")
+    @Operation(summary = "안 읽은 채팅 개수", description = "채팅 리스트에서 안 읽은 채팅 개수 최초 조회")
+    public SuccessResponse<UnReadChatCountResponseVo> countUnreadChats(
+        @PathVariable(value = "roomNumber") String roomNumber,
+        @RequestHeader String uuid) {
+        return new SuccessResponse<>(UnReadChatCountResponseDto.dtoToVo(chatService
+            .getUnreadChatCount(roomNumber, uuid)));
+    }
 }
