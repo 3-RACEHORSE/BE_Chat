@@ -123,7 +123,7 @@ public class ChatServiceImp implements ChatService {
                 chatRoomMemberRepository.save(chatRoomMember);
                 log.info("chatRoomMember 저장완료: {}", chatRoomMember);
             });
-            sendToAlarm(beforeChatRoomDto);
+            sendToAlarm(beforeChatRoomDto, roomNumber);
         } catch (Exception e) {
             log.error("채팅 방 생성중 오류 발생: {}", e.getMessage());
             throw new CustomException(ResponseStatus.CREATE_CHATROOM_FAILED);
@@ -360,12 +360,13 @@ public class ChatServiceImp implements ChatService {
         }
     }
 
-    private void sendToAlarm(BeforeChatRoomDto beforeChatRoomDto) {
+    private void sendToAlarm(BeforeChatRoomDto beforeChatRoomDto, String roomNumber) {
 //         log.info("alarmDto에 들어갈 receiverUuids: {}", beforeChatRoomDto.getMemberUuidsWithProfiles().keySet().toString());
 //         log.info("alarmDto에 들어갈 message: {}", beforeChatRoomDto.getTitle());
         // 알람 서비스로 전송
         SendToAlarmDto sendToAlarmDto = SendToAlarmDto.builder()
             .eventType("chat")
+            .roomNumber(roomNumber)
             .receiverUuids(
                 new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
             .message(beforeChatRoomDto.getTitle() + " 채팅방이 열렸습니다.")
