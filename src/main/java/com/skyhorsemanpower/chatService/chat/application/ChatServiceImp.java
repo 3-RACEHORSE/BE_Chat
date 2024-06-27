@@ -3,6 +3,7 @@ package com.skyhorsemanpower.chatService.chat.application;
 import com.mongodb.client.model.changestream.OperationType;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.UnReadChatCountResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
@@ -270,8 +271,6 @@ public class ChatServiceImp implements ChatService {
     @Override
     @Transactional
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
-//        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
-//        redisTemplate.delete(redisKey);
         mongoTemplate.updateFirst(
             Query.query(
                 Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber")
@@ -279,8 +278,7 @@ public class ChatServiceImp implements ChatService {
             Update.update("lastReadTime", LocalDateTime.now()),
             ChatRoomMember.class
         );
-        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(),
-            leaveChatRoomDto.getUuid());
+        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
 
     @Override
@@ -307,7 +305,7 @@ public class ChatServiceImp implements ChatService {
                 Aggregation.match(
                     Criteria.where("operationType").is(OperationType.INSERT.getValue())),
                 // roomNumber랑 일치하는지
-                Aggregation.match(Criteria.where("fullDocument.roomNumber").is(roomNumber))
+                Aggregation.match(Criteria.where("fullDocument.chatRoomMembers.memberUuid").is(uuid))
             ))
             .build();
         // 해당 변경 사항을 들고오기
@@ -317,6 +315,7 @@ public class ChatServiceImp implements ChatService {
                 log.info("검색: {}", document);
                 return LastChatVo.builder()
                     .content(document.getString("content"))
+                    .roomNumber(document.getString("roomNumber"))
                     .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(),
                         ZoneId.systemDefault()))
                     .build();
@@ -393,6 +392,21 @@ public class ChatServiceImp implements ChatService {
         } catch (Exception e) {
             throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
         }
+    }
+
+    @Override
+    public UnReadChatCountResponseDto getUnreadChatCount(String roomNumber, String uuid) {
+        ChatRoomMember chatRoomMember = chatRoomMemberRepository
+            .findByMemberUuidAndRoomNumber(uuid, roomNumber)
+            .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+        // 해당 채팅방에서 uuid의 lastReadTime 이후의 채팅 개수
+        Long count = mongoTemplate.count(
+            Query.query(
+                Criteria.where("roomNumber").is(roomNumber).and("createdAt")
+                    .gt(chatRoomMember.getLastReadTime())), "chat");
+        return UnReadChatCountResponseDto.builder()
+            .count(count)
+            .build();
     }
 
 }

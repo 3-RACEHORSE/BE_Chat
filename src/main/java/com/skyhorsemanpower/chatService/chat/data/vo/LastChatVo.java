@@ -8,10 +8,12 @@ import lombok.Getter;
 public class LastChatVo {
     private String content;
     private LocalDateTime createdAt;
+    private String roomNumber;
     @Builder
-    public LastChatVo(String content, LocalDateTime createdAt) {
+    public LastChatVo(String content, LocalDateTime createdAt, String roomNumber) {
         this.content = content;
         this.createdAt = createdAt;
+        this.roomNumber = roomNumber;
     }
 
     public LastChatVo() {
