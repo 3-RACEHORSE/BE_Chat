@@ -270,8 +270,6 @@ public class ChatServiceImp implements ChatService {
     @Override
     @Transactional
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
-//        String redisKey = "room:" + leaveChatRoomDto.getRoomNumber() + ":member:" + leaveChatRoomDto.getUuid();
-//        redisTemplate.delete(redisKey);
         mongoTemplate.updateFirst(
             Query.query(
                 Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber")
@@ -279,8 +277,7 @@ public class ChatServiceImp implements ChatService {
             Update.update("lastReadTime", LocalDateTime.now()),
             ChatRoomMember.class
         );
-        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(),
-            leaveChatRoomDto.getUuid());
+        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
     }
 
     @Override
@@ -307,7 +304,7 @@ public class ChatServiceImp implements ChatService {
                 Aggregation.match(
                     Criteria.where("operationType").is(OperationType.INSERT.getValue())),
                 // roomNumber랑 일치하는지
-                Aggregation.match(Criteria.where("fullDocument.roomNumber").is(roomNumber))
+                Aggregation.match(Criteria.where("fullDocument.chatRoomMembers.memberUuid").is(uuid))
             ))
             .build();
         // 해당 변경 사항을 들고오기
@@ -317,6 +314,7 @@ public class ChatServiceImp implements ChatService {
                 log.info("검색: {}", document);
                 return LastChatVo.builder()
                     .content(document.getString("content"))
+                    .roomNumber(document.getString("roomNumber"))
                     .createdAt(LocalDateTime.ofInstant(document.getDate("createdAt").toInstant(),
                         ZoneId.systemDefault()))
                     .build();
