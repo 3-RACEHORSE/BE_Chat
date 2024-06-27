@@ -8,6 +8,7 @@ import lombok.Getter;
 @Builder
 public class SendToAlarmDto {
     private List<String> receiverUuids;
+    private String roomNumber;
     private String eventType;
     private String message;
 }
