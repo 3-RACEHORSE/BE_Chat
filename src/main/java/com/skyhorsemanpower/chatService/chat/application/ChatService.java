@@ -1,6 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UpdateProfileImageRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
@@ -35,4 +36,6 @@ public interface ChatService {
     ChatRoomTitleResponseDto getChatRoomTitle(String uuid, String roomNumber);
 
     void updateProfileImage(UpdateProfileImageRequestDto updateProfileImageRequestDto);
+
+    List<ChatRoomMemberResponseDto> getChatRoomMembers(String roomNumber);
 }

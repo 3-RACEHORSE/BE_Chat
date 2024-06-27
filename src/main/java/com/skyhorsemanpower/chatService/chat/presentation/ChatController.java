@@ -1,9 +1,11 @@
 package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
+import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
+import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomMemberResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.GetChatVo;
@@ -12,12 +14,12 @@ import com.skyhorsemanpower.chatService.chat.data.vo.LeaveChatRoomRequestVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.PreviousChatResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.SendChatRequestVo;
 import com.skyhorsemanpower.chatService.common.SuccessResponse;
-import com.skyhorsemanpower.chatService.common.response.CustomException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -40,6 +42,7 @@ import reactor.core.publisher.Flux;
 @Tag(name = "채팅", description = "채팅 관련 API")
 @Slf4j
 public class ChatController {
+
     private final ChatService chatService;
 
     @PostMapping
@@ -65,7 +68,8 @@ public class ChatController {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "40") int size) {
         log.info("roomNumber: {}", roomNumber);
-        PreviousChatResponseVo previousChatResponseVo = chatService.getPreviousChat(roomNumber, enterTime, page, size);
+        PreviousChatResponseVo previousChatResponseVo = chatService.getPreviousChat(roomNumber,
+            enterTime, page, size);
         return new SuccessResponse<>(previousChatResponseVo);
     }
 
@@ -91,7 +95,8 @@ public class ChatController {
     @PutMapping("/leaveChatRoom")
     @Operation(summary = "입장정보 삭제", description = "검색한 곳에서 상태가 바뀌면 beforeUnload를 실행시키고\n\n"
         + "performance.navigation.type이 1(새로고침)인 경우를 제외하면 된다고 함")
-    public SuccessResponse<Object> leaveChatRoom(@RequestBody LeaveChatRoomRequestVo leaveChatRoomRequestVo) {
+    public SuccessResponse<Object> leaveChatRoom(
+        @RequestBody LeaveChatRoomRequestVo leaveChatRoomRequestVo) {
         LeaveChatRoomDto leaveChatRoomDto = leaveChatRoomRequestVo.toLeaveChatRoomDto();
         chatService.leaveChatRoom(leaveChatRoomDto);
         return new SuccessResponse<>(null);
@@ -99,7 +104,8 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}/last")
     @Operation(summary = "채팅 리스트 불러올 때, 마지막 채팅", description = "첫 채팅 리스트를 불러올 때 마지막 채팅 조회")
-    public SuccessResponse<LastChatVo> lastChatSync(@PathVariable(value = "roomNumber") String roomNumber,
+    public SuccessResponse<LastChatVo> lastChatSync(
+        @PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         LastChatVo lastChatVo = chatService.getLastChatSync(uuid, roomNumber);
         return new SuccessResponse<>(lastChatVo);
@@ -107,7 +113,8 @@ public class ChatController {
 
     @GetMapping(value = "/roomNumber/{roomNumber}/new", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "계속 바뀌는 마지막 채팅", description = "계속 변화를 감지해 변하는 마지막 채팅")
-    public SuccessResponse<Flux<LastChatVo>> lastChat(@PathVariable(value = "roomNumber") String roomNumber,
+    public SuccessResponse<Flux<LastChatVo>> lastChat(
+        @PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         Flux<LastChatVo> lastChatVo = chatService.getLastChat(uuid, roomNumber);
         // Heartbeat 스트림
@@ -115,18 +122,31 @@ public class ChatController {
             .map(tick -> new LastChatVo());
 
         // 결합된 스트림: 실제 메시지와 heartbeat 이벤트
-        Flux<LastChatVo> lastChatMessages = lastChatVo.mergeWith(heartbeat).timeout(Duration.ofHours(1))
+        Flux<LastChatVo> lastChatMessages = lastChatVo.mergeWith(heartbeat)
+            .timeout(Duration.ofHours(1))
             .doOnSubscribe(sub -> log.info("last chatMessages, heartbeat"))
-            .doOnError(error -> log.error("에러 발생: {}", error.getMessage()));;
+            .doOnError(error -> log.error("에러 발생: {}", error.getMessage()));
+        ;
         return new SuccessResponse<>(lastChatMessages);
     }
 
     @GetMapping(value = "/roomNumber/{roomNumber}/title")
     @Operation(summary = "채팅방 제목", description = "채팅방 상단의 제목")
-    public SuccessResponse<ChatRoomTitleResponseVo> chatRoomTitle(@PathVariable(value = "roomNumber") String roomNumber,
+    public SuccessResponse<ChatRoomTitleResponseVo> chatRoomTitle(
+        @PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         return new SuccessResponse<>(
             ChatRoomTitleResponseDto.dtoToVo(chatService.getChatRoomTitle(uuid, roomNumber)));
+    }
+
+    @GetMapping(value = "/roomNumber/{roomNumber}/member")
+    @Operation(summary = "채팅방 멤버 목록", description = "채팅방 내에서 채팅방 멤버들을 표시합니다")
+    public SuccessResponse<List<ChatRoomMemberResponseVo>> chatRoomMembers(@PathVariable(value = "roomNumber") String roomNumber) {
+        List<ChatRoomMemberResponseDto> chatRoomMemberResponseDtos = chatService.getChatRoomMembers(roomNumber);
+        List<ChatRoomMemberResponseVo> chatRoomMemberResponseVos = chatRoomMemberResponseDtos.stream()
+            .map(ChatRoomMemberResponseDto::dtoToVo)
+            .toList();
+        return new SuccessResponse<>(chatRoomMemberResponseVos);
     }
 
 }
