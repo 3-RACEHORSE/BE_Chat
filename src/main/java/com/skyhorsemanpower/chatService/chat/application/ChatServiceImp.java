@@ -366,7 +366,7 @@ public class ChatServiceImp implements ChatService {
         // 알람 서비스로 전송
         SendToAlarmDto sendToAlarmDto = SendToAlarmDto.builder()
             .eventType("chat")
-            .roomNumber(roomNumber)
+            .url(roomNumber)
             .receiverUuids(
                 new ArrayList<>(beforeChatRoomDto.getMemberUuidsWithProfiles().keySet()))
             .message(beforeChatRoomDto.getTitle() + " 채팅방이 열렸습니다.")

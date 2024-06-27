@@ -11,5 +11,5 @@ public class SendToAlarmDto {
     private List<String> receiverUuids;
     private String eventType;
     private String message;
-    private String roomNumber;
+    private String url;
 }
