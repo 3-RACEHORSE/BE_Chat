@@ -19,10 +19,11 @@ public class ChatRoom {
     private LocalDateTime updatedAt;
     private String title;
     private String thumbnail;
+    private String auctionUuid;
 
     @Builder
     public ChatRoom(String id, List<ChatRoomMember> chatRoomMembers, String roomNumber,
-        LocalDateTime createdAt, LocalDateTime updatedAt, String title, String thumbnail) {
+        LocalDateTime createdAt, LocalDateTime updatedAt, String title, String thumbnail, String auctionUuid) {
         this.id = id;
         this.chatRoomMembers = chatRoomMembers;
         this.roomNumber = roomNumber;
@@ -30,5 +31,6 @@ public class ChatRoom {
         this.updatedAt = updatedAt;
         this.title = title;
         this.thumbnail = thumbnail;
+        this.auctionUuid = auctionUuid;
     }
 }

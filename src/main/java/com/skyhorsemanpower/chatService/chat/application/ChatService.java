@@ -1,5 +1,6 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
+import com.skyhorsemanpower.chatService.chat.data.dto.AuctionUuidResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UnReadChatCountResponseDto;
@@ -43,4 +44,7 @@ public interface ChatService {
     UnReadChatCountResponseDto getUnreadChatCount(String roomNumber, String uuid);
 
     void exitChatRoom(String roomNumber, String uuid);
+  
+    AuctionUuidResponseDto getAuctionUuid(String roomNumber);
+
 }

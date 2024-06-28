@@ -1,11 +1,13 @@
 package com.skyhorsemanpower.chatService.chat.presentation;
 
 import com.skyhorsemanpower.chatService.chat.application.ChatService;
+import com.skyhorsemanpower.chatService.chat.data.dto.AuctionUuidResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomTitleResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.SendChatRequestDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UnReadChatCountResponseDto;
+import com.skyhorsemanpower.chatService.chat.data.vo.AuctionUuidResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomMemberResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomResponseVo;
 import com.skyhorsemanpower.chatService.chat.data.vo.ChatRoomTitleResponseVo;
@@ -169,5 +171,12 @@ public class ChatController {
         @RequestHeader String uuid) {
         chatService.exitChatRoom(roomNumber, uuid);
         return new SuccessResponse<>("채팅방에서 퇴장했습니다");
+
+    @GetMapping(value = "/roomNumber/{roomNumber}/findAuction")
+    @Operation(summary = "roomNumber로 auctionUuid 조회", description = "채팅방 내에서 roomNumber로 auctionUuid를 조회합니다")
+    public SuccessResponse<AuctionUuidResponseVo> getAuctionUuid(
+        @PathVariable(value = "roomNumber") String roomNumber) {
+        return new SuccessResponse<>(AuctionUuidResponseDto.dtoToVo(chatService
+            .getAuctionUuid(roomNumber)));
     }
 }
