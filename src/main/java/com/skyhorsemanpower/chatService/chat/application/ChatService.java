@@ -41,4 +41,6 @@ public interface ChatService {
     List<ChatRoomMemberResponseDto> getChatRoomMembers(String roomNumber);
 
     UnReadChatCountResponseDto getUnreadChatCount(String roomNumber, String uuid);
+
+    void exitChatRoom(String roomNumber, String uuid);
 }
