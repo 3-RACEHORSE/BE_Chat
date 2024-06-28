@@ -1,6 +1,7 @@
 package com.skyhorsemanpower.chatService.chat.application;
 
 import com.mongodb.client.model.changestream.OperationType;
+import com.skyhorsemanpower.chatService.chat.data.dto.AuctionUuidResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.BeforeChatRoomDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.ChatRoomMemberResponseDto;
 import com.skyhorsemanpower.chatService.chat.data.dto.UnReadChatCountResponseDto;
@@ -108,6 +109,7 @@ public class ChatServiceImp implements ChatService {
 
             // 채팅방 저장
             ChatRoom chatRoom = ChatRoom.builder()
+                .auctionUuid(beforeChatRoomDto.getAuctionUuid())
                 .roomNumber(roomNumber)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -271,15 +273,20 @@ public class ChatServiceImp implements ChatService {
     @Override
     @Transactional
     public void leaveChatRoom(LeaveChatRoomDto leaveChatRoomDto) {
-        mongoTemplate.updateFirst(
-            Query.query(
-                Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid()).and("roomNumber")
-                    .is(leaveChatRoomDto.getRoomNumber())),
-            Update.update("lastReadTime", LocalDateTime.now()),
-            ChatRoomMember.class
+        Query query = Query.query(
+            Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid())
+                .and("roomNumber").is(leaveChatRoomDto.getRoomNumber())
         );
-        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(), leaveChatRoomDto.getUuid());
+        Update update = Update.update("lastReadTime", LocalDateTime.now());
+        log.info("Query: {}", query);
+        log.info("Update: {}", update);
+
+        mongoTemplate.updateFirst(query, update, ChatRoomMember.class);
+
+        log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(),
+            leaveChatRoomDto.getUuid());
     }
+
 
     @Override
     public LastChatVo getLastChatSync(String uuid, String roomNumber) {
@@ -305,7 +312,8 @@ public class ChatServiceImp implements ChatService {
                 Aggregation.match(
                     Criteria.where("operationType").is(OperationType.INSERT.getValue())),
                 // roomNumber랑 일치하는지
-                Aggregation.match(Criteria.where("fullDocument.chatRoomMembers.memberUuid").is(uuid))
+                Aggregation.match(
+                    Criteria.where("fullDocument.chatRoomMembers.memberUuid").is(uuid))
             ))
             .build();
         // 해당 변경 사항을 들고오기
@@ -409,4 +417,12 @@ public class ChatServiceImp implements ChatService {
             .build();
     }
 
+    @Override
+    public AuctionUuidResponseDto getAuctionUuid(String roomNumber) {
+        ChatRoom chatRoom = chatRoomRepository.findByRoomNumber(roomNumber)
+            .orElseThrow(() -> new CustomException(ResponseStatus.NO_DATA));
+        return AuctionUuidResponseDto.builder()
+            .auctionUuid(chatRoom.getAuctionUuid())
+            .build();
+    }
 }
