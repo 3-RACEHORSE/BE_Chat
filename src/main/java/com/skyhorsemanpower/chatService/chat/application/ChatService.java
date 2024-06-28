@@ -43,5 +43,8 @@ public interface ChatService {
 
     UnReadChatCountResponseDto getUnreadChatCount(String roomNumber, String uuid);
 
+    void exitChatRoom(String roomNumber, String uuid);
+  
     AuctionUuidResponseDto getAuctionUuid(String roomNumber);
+
 }
