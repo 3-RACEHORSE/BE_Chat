@@ -417,12 +417,14 @@ public class ChatServiceImp implements ChatService {
                 roomNumber, uuid)
             .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
         try {
+            // chatRoom 정보 업데이트
             mongoTemplate.updateFirst(
                 Query.query(Criteria.where("roomNumber").is(roomNumber)),
                 new Update().pull("chatRoomMembers",
                     Query.query(Criteria.where("memberUuid").is(uuid)).getQueryObject()),
                 ChatRoom.class
             );
+            // chatRoomMember 정보 삭제하기
             mongoTemplate.findAndRemove(
                 Query.query(Criteria.where("roomNumber").is(roomNumber).and("memberUuid").is(uuid)),
                 ChatRoomMember.class
