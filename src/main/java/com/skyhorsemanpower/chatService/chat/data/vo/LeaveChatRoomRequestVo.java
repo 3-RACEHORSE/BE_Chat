@@ -1,7 +1,9 @@
 package com.skyhorsemanpower.chatService.chat.data.vo;
 
 import com.skyhorsemanpower.chatService.chat.data.dto.LeaveChatRoomDto;
+import lombok.Getter;
 
+@Getter
 public class LeaveChatRoomRequestVo {
     private String roomNumber;
     private String uuid;
