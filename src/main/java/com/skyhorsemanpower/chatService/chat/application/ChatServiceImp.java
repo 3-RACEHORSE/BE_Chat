@@ -277,6 +277,12 @@ public class ChatServiceImp implements ChatService {
             Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid())
                 .and("roomNumber").is(leaveChatRoomDto.getRoomNumber())
         );
+        Update update = Update.update("lastReadTime", LocalDateTime.now());
+        log.info("Query: {}", query);
+        log.info("Update: {}", update);
+
+        mongoTemplate.updateFirst(query, update, ChatRoomMember.class);
+
         log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(),
             leaveChatRoomDto.getUuid());
     }
