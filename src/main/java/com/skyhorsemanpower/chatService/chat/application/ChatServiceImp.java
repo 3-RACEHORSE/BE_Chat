@@ -277,12 +277,6 @@ public class ChatServiceImp implements ChatService {
             Criteria.where("memberUuid").is(leaveChatRoomDto.getUuid())
                 .and("roomNumber").is(leaveChatRoomDto.getRoomNumber())
         );
-        Update update = Update.update("lastReadTime", LocalDateTime.now());
-        log.info("Query: {}", query);
-        log.info("Update: {}", update);
-
-        mongoTemplate.updateFirst(query, update, ChatRoomMember.class);
-
         log.info("lastReadTime 수정 RoomNumber: {}, uuid: {}", leaveChatRoomDto.getRoomNumber(),
             leaveChatRoomDto.getUuid());
     }
@@ -418,6 +412,28 @@ public class ChatServiceImp implements ChatService {
     }
 
     @Override
+    public void exitChatRoom(String roomNumber, String uuid) {
+        chatRoomRepository.findByRoomNumberAndChatRoomMembers_MemberUuid(
+                roomNumber, uuid)
+            .orElseThrow(() -> new CustomException(ResponseStatus.WRONG_CHATROOM_AND_MEMBER));
+        try {
+            // chatRoom 정보 업데이트
+            mongoTemplate.updateFirst(
+                Query.query(Criteria.where("roomNumber").is(roomNumber)),
+                new Update().pull("chatRoomMembers",
+                    Query.query(Criteria.where("memberUuid").is(uuid)).getQueryObject()),
+                ChatRoom.class
+            );
+            // chatRoomMember 정보 삭제하기
+            mongoTemplate.findAndRemove(
+                Query.query(Criteria.where("roomNumber").is(roomNumber).and("memberUuid").is(uuid)),
+                ChatRoomMember.class
+            );
+        } catch (Exception e) {
+            throw new CustomException(ResponseStatus.MONGO_DB_ERROR);
+        }
+    }
+
     public AuctionUuidResponseDto getAuctionUuid(String roomNumber) {
         ChatRoom chatRoom = chatRoomRepository.findByRoomNumber(roomNumber)
             .orElseThrow(() -> new CustomException(ResponseStatus.NO_DATA));
