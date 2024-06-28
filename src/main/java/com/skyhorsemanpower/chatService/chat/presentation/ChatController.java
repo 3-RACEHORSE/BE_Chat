@@ -167,10 +167,12 @@ public class ChatController {
 
     @DeleteMapping(value = "/roomNumber/{roomNumber}/exit")
     @Operation(summary = "채팅방에서 완전히 나가기", description = "채팅방 회원이 채팅방에서 완전히 나가는 기능")
-    public SuccessResponse<Object> exitChatRoom(@PathVariable (value = "roomNumber") String roomNumber,
+    public SuccessResponse<Object> exitChatRoom(
+        @PathVariable(value = "roomNumber") String roomNumber,
         @RequestHeader String uuid) {
         chatService.exitChatRoom(roomNumber, uuid);
         return new SuccessResponse<>("채팅방에서 퇴장했습니다");
+    }
 
     @GetMapping(value = "/roomNumber/{roomNumber}/findAuction")
     @Operation(summary = "roomNumber로 auctionUuid 조회", description = "채팅방 내에서 roomNumber로 auctionUuid를 조회합니다")
