@@ -299,7 +299,10 @@ public class ChatServiceImp implements ChatService {
                 .createdAt(optionalChat.get().getCreatedAt())
                 .build();
         } else {
-            throw new CustomException(ResponseStatus.NO_DATA);
+            return LastChatVo.builder()
+                .content(null)
+                .createdAt(null)
+                .build();
         }
     }
 
