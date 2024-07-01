@@ -50,7 +50,6 @@ import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -65,7 +64,6 @@ public class ChatServiceImp implements ChatService {
     private final ChatRepository chatRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatSyncRepository chatSyncRepository;
-    private final RedisTemplate<String, String> redisTemplate;
     private final ReactiveMongoTemplate reactiveMongoTemplate;
     private final MongoTemplate mongoTemplate;
     private final AuctionPostClient auctionPostClient;
